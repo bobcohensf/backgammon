@@ -21,8 +21,8 @@ def test_bearing_off():
     board.points[5] = 3
     board.off[1] = 0
 
-    # Put Player 2's pieces far away
-    board.points[13] = 15
+    # Put Player 2's pieces far away (negative for player 2)
+    board.points[13] = -15
     board.off[-1] = 0
 
     print("\nInitial board:")
