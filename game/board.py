@@ -233,9 +233,22 @@ class Board:
         """
         features = []
 
+        # Encode board from current player's perspective
+        # Always encode from their home board toward opponent's home
+        # This makes the spatial relationships consistent for both players
+
+        if player == 1:
+            # Player 1: home is 1-6, moves from 24→1
+            # Encode in order that matches their movement: 24→23→...→2→1
+            point_order = range(24, 0, -1)
+        else:
+            # Player 2: home is 19-24, moves from 1→24
+            # Encode in order that matches their movement: 1→2→...→23→24
+            point_order = range(1, 25)
+
         # For each point, encode: how many of our pieces, how many opponent pieces
         # We'll use a more sophisticated encoding with multiple features per point
-        for point in range(1, 25):
+        for point in point_order:
             value = self.points[point]
 
             if player == 1:
