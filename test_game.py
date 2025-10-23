@@ -13,16 +13,16 @@ def test_bearing_off():
     # Create a board where player 1 can bear off
     board = Board([0] * 25)  # Empty board
 
-    # Put Player 1's pieces in home board (points 1-6)
-    board.points[1] = 3
-    board.points[2] = 3
-    board.points[3] = 3
-    board.points[4] = 3
-    board.points[5] = 3
+    # Put Player 1's pieces in home board (points 19-24)
+    board.points[19] = 3
+    board.points[20] = 3
+    board.points[21] = 3
+    board.points[22] = 3
+    board.points[23] = 3
     board.off[1] = 0
 
     # Put Player 2's pieces far away (negative for player 2)
-    board.points[13] = -15
+    board.points[7] = -15
     board.off[-1] = 0
 
     print("\nInitial board:")
