@@ -70,11 +70,24 @@ def main():
     print("Loading model...")
     network = BackgammonNet()
 
-    # Try to load trained model
+    # Try to load trained model (check for final or latest checkpoint)
+    model_loaded = False
     if os.path.exists('models/model_final.pth'):
         network.load('models/model_final.pth')
-        print("Loaded trained model")
+        print("Loaded trained model (final)")
+        model_loaded = True
     else:
+        # Look for latest checkpoint
+        import glob
+        checkpoints = glob.glob('models/model_game_*.pth')
+        if checkpoints:
+            # Sort by game number and get the latest
+            latest = sorted(checkpoints, key=lambda x: int(x.split('_')[-1].split('.')[0]))[-1]
+            network.load(latest)
+            print(f"Loaded trained model ({latest})")
+            model_loaded = True
+
+    if not model_loaded:
         print("Using untrained model")
 
     agent = TDAgent(network=network, epsilon=0.0)
