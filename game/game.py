@@ -174,11 +174,13 @@ class BackgammonGame:
 
         # First, check if we need to enter from bar
         if board.bar[player] > 0:
-            # Must enter from bar
+            # Must enter from bar into opponent's home board
+            # Player 1 enters into points 19-24 (opponent's home)
+            # Player 2 enters into points 1-6 (opponent's home)
             if player == 1:
-                entry_point = die_value
+                entry_point = 25 - die_value  # 19-24
             else:
-                entry_point = 25 - die_value
+                entry_point = die_value  # 1-6
 
             if board.can_enter_from_bar(player, entry_point):
                 moves.append(Move(0, entry_point, die_value))

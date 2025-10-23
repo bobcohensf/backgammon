@@ -135,10 +135,11 @@ backgammon/
 ### Board Representation
 
 Points are numbered 1-24:
-- **Player 1 (X)**: Home board (1-6), moves toward 24
-- **Player 2 (O)**: Home board (19-24), moves toward 1
+- **Player 1 (X)**: Home board (1-6), moves from high→low (24→1→OFF)
+- **Player 2 (O)**: Home board (19-24), moves from low→high (1→24→OFF)
 - **Positive values**: Player 1's checkers
 - **Negative values**: Player 2's checkers
+- Pieces on bar enter into opponent's home board
 
 ### Move Generation
 
