@@ -136,18 +136,23 @@ class SelfPlayTrainer:
             states: List of (board, player) tuples
             values: List of value predictions
         """
-        # Perform TD updates backwards through the game
+        # Accumulate total loss across all timesteps
+        total_loss = torch.tensor(0.0, dtype=torch.float32, requires_grad=True)
+
         for t in range(len(values) - 1):
             curr_value = values[t]
             next_value = values[t + 1].detach()  # Don't backprop through next value
 
-            # TD error
+            # TD error - target is next value, prediction is current value
             td_error = next_value - curr_value
 
-            # Update using gradient descent
+            # Accumulate squared TD error
+            total_loss = total_loss + (td_error ** 2)
+
+        # Single backward pass for all timesteps
+        if len(values) > 1:
             self.agent.optimizer.zero_grad()
-            loss = td_error ** 2
-            loss.backward()
+            total_loss.backward()
             self.agent.optimizer.step()
 
     def train(self, num_games=10000, save_every=1000, verbose=True):
