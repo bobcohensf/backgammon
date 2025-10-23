@@ -193,23 +193,26 @@ class BackgammonGame:
                 continue
 
             # Calculate destination
+            # Player 1 moves DOWN (24→1→off), Player 2 moves UP (1→24→off)
             if player == 1:
-                to_point = point + die_value
-            else:
                 to_point = point - die_value
+            else:
+                to_point = point + die_value
 
             # Check bearing off
             if can_bear_off:
                 if player == 1:
-                    if to_point >= 25:
-                        # Exact or overshoot bearing off
-                        if to_point == 25 or (to_point > 25 and self._is_highest_point(board, player, point)):
-                            moves.append(Move(point, 25, die_value))
-                            continue
-                else:
+                    # Player 1 bears off when moving below point 1 (to_point <= 0)
                     if to_point <= 0:
                         # Exact or overshoot bearing off
                         if to_point == 0 or (to_point < 0 and self._is_highest_point(board, player, point)):
+                            moves.append(Move(point, 25, die_value))
+                            continue
+                else:
+                    # Player 2 bears off when moving above point 24 (to_point >= 25)
+                    if to_point >= 25:
+                        # Exact or overshoot bearing off
+                        if to_point == 25 or (to_point > 25 and self._is_highest_point(board, player, point)):
                             moves.append(Move(point, 0, die_value))
                             continue
 
