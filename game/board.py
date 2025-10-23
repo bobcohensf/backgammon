@@ -1,15 +1,18 @@
 """
 Backgammon board representation and state management.
 
-Board layout (from Player 1's perspective):
+Board layout:
 13 14 15 16 17 18    19 20 21 22 23 24
                 BAR
 12 11 10  9  8  7     6  5  4  3  2  1
 
-Points 1-6: Player 1's home board
-Points 7-12: Player 1's outer board
-Points 13-18: Player 2's outer board
-Points 19-24: Player 2's home board
+Points 1-6: Player 2's home board (Player 2 bears off here)
+Points 7-12: Player 2's outer board
+Points 13-18: Player 1's outer board
+Points 19-24: Player 1's home board (Player 1 bears off here)
+
+Player 1 moves UP: 1→2→...→24→OFF
+Player 2 moves DOWN: 24→23→...→1→OFF
 
 Positive numbers = Player 1's pieces
 Negative numbers = Player 2's pieces
@@ -207,13 +210,13 @@ class Board:
 
         # All pieces must be in home board
         if player == 1:
-            # Home board is points 1-6
-            for point in range(7, 25):
+            # Home board is points 19-24
+            for point in range(1, 19):
                 if self.points[point] > 0:
                     return False
         else:
-            # Home board is points 19-24
-            for point in range(1, 19):
+            # Home board is points 1-6
+            for point in range(7, 25):
                 if self.points[point] < 0:
                     return False
 
@@ -234,17 +237,17 @@ class Board:
         features = []
 
         # Encode board from current player's perspective
-        # Always encode from their home board toward opponent's home
+        # Always encode from opponent's home toward their own home
         # This makes the spatial relationships consistent for both players
 
         if player == 1:
-            # Player 1: home is 1-6, moves from 24→1
-            # Encode in order that matches their movement: 24→23→...→2→1
-            point_order = range(24, 0, -1)
-        else:
-            # Player 2: home is 19-24, moves from 1→24
+            # Player 1: home is 19-24, moves from 1→24
             # Encode in order that matches their movement: 1→2→...→23→24
             point_order = range(1, 25)
+        else:
+            # Player 2: home is 1-6, moves from 24→1
+            # Encode in order that matches their movement: 24→23→...→2→1
+            point_order = range(24, 0, -1)
 
         # For each point, encode: how many of our pieces, how many opponent pieces
         # We'll use a more sophisticated encoding with multiple features per point

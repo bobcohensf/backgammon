@@ -175,12 +175,12 @@ class BackgammonGame:
         # First, check if we need to enter from bar
         if board.bar[player] > 0:
             # Must enter from bar into opponent's home board
-            # Player 1 enters into points 19-24 (opponent's home)
-            # Player 2 enters into points 1-6 (opponent's home)
+            # Player 1 enters into points 1-6 (opponent's home)
+            # Player 2 enters into points 19-24 (opponent's home)
             if player == 1:
-                entry_point = 25 - die_value  # 19-24
-            else:
                 entry_point = die_value  # 1-6
+            else:
+                entry_point = 25 - die_value  # 19-24
 
             if board.can_enter_from_bar(player, entry_point):
                 moves.append(Move(0, entry_point, die_value))
@@ -195,26 +195,26 @@ class BackgammonGame:
                 continue
 
             # Calculate destination
-            # Player 1 moves DOWN (24→1→off), Player 2 moves UP (1→24→off)
+            # Player 1 moves UP (1→24→off), Player 2 moves DOWN (24→1→off)
             if player == 1:
-                to_point = point - die_value
-            else:
                 to_point = point + die_value
+            else:
+                to_point = point - die_value
 
             # Check bearing off
             if can_bear_off:
                 if player == 1:
-                    # Player 1 bears off when moving below point 1 (to_point <= 0)
-                    if to_point <= 0:
-                        # Exact or overshoot bearing off
-                        if to_point == 0 or (to_point < 0 and self._is_highest_point(board, player, point)):
-                            moves.append(Move(point, 25, die_value))
-                            continue
-                else:
-                    # Player 2 bears off when moving above point 24 (to_point >= 25)
+                    # Player 1 bears off when moving above point 24 (to_point >= 25)
                     if to_point >= 25:
                         # Exact or overshoot bearing off
                         if to_point == 25 or (to_point > 25 and self._is_highest_point(board, player, point)):
+                            moves.append(Move(point, 25, die_value))
+                            continue
+                else:
+                    # Player 2 bears off when moving below point 1 (to_point <= 0)
+                    if to_point <= 0:
+                        # Exact or overshoot bearing off
+                        if to_point == 0 or (to_point < 0 and self._is_highest_point(board, player, point)):
                             moves.append(Move(point, 0, die_value))
                             continue
 
@@ -244,11 +244,13 @@ class BackgammonGame:
             True if no pieces on higher points
         """
         if player == 1:
-            for p in range(point + 1, 7):
+            # Player 1 home is 19-24, check if any pieces at higher points (closer to 19)
+            for p in range(19, point):
                 if board.get_piece_count(p, player) > 0:
                     return False
         else:
-            for p in range(point - 1, 18, -1):
+            # Player 2 home is 1-6, check if any pieces at higher points (closer to 6)
+            for p in range(point + 1, 7):
                 if board.get_piece_count(p, player) > 0:
                     return False
         return True
