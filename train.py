@@ -66,6 +66,7 @@ def main():
     print(f"Evaluation results (1000 games):")
     print(f"  Player 1 wins: {results['p1_wins']} ({results['p1_win_rate']:.1%})")
     print(f"  Player 2 wins: {results['p2_wins']} ({results['p2_win_rate']:.1%})")
+    print(f"  Incomplete games: {results['incomplete']} ({results['incomplete_rate']:.1%})")
 
     print(f"\nTraining complete! Final model saved to {args.save_dir}/model_final.pth")
 

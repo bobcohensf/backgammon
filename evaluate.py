@@ -133,6 +133,11 @@ def main():
     total_games = args.games
     win_rate = total_wins / total_games
 
+    # Calculate incomplete games
+    total_incomplete = results1.get('incomplete', 0)
+    if not isinstance(agent2, RandomAgent):
+        total_incomplete += results2.get('incomplete', 0)
+
     print(f"\n{'=' * 60}")
     print("FINAL RESULTS")
     print(f"{'=' * 60}")
@@ -143,6 +148,8 @@ def main():
     print(f"  As O (second): {model1_wins_as_p2}/{args.games // 2} "
           f"({model1_wins_as_p2 / (args.games // 2):.1%})")
     print(f"\nOverall: {total_wins}/{total_games} ({win_rate:.1%})")
+    if total_incomplete > 0:
+        print(f"Incomplete games: {total_incomplete} ({100*total_incomplete/total_games:.1f}%)")
     print(f"{'=' * 60}")
 
     # Interpretation

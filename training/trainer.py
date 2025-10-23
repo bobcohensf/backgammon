@@ -28,6 +28,7 @@ class SelfPlayTrainer:
         # Training statistics
         self.games_played = 0
         self.wins = {1: 0, -1: 0}
+        self.incomplete_games = 0
 
     def play_game(self, training=True) -> int:
         """Play one game of self-play.
@@ -45,7 +46,7 @@ class SelfPlayTrainer:
         values = []  # List of value tensors
 
         move_count = 0
-        max_moves = 500  # Prevent infinite games
+        max_moves = 3000  # Prevent infinite games (high limit for learning phase)
 
         while move_count < max_moves:
             player = game.current_player
@@ -87,10 +88,21 @@ class SelfPlayTrainer:
             game.switch_player()
             move_count += 1
 
-        # Max moves reached - call it a draw (shouldn't happen often)
-        # Treat as loss for both
+        # Max moves reached - game didn't finish
+        # This can happen during early training when network hasn't learned
+        self.incomplete_games += 1
         self.games_played += 1
-        return 1  # Arbitrary winner
+
+        # For training purposes, assign winner to whoever has more pieces off
+        if game.board.off[1] > game.board.off[-1]:
+            winner = 1
+        elif game.board.off[-1] > game.board.off[1]:
+            winner = -1
+        else:
+            winner = 1  # Tie goes to player 1
+
+        self.wins[winner] += 1
+        return winner
 
     def _td_update(self, states: List[tuple], values: List[torch.Tensor]):
         """Perform TD(λ) updates for a game trajectory.
@@ -138,12 +150,16 @@ class SelfPlayTrainer:
 
                 if verbose:
                     win_rate_p1 = self.wins[1] / self.games_played if self.games_played > 0 else 0
-                    print(f"\nGames: {self.games_played}, P1 win rate: {win_rate_p1:.3f}")
+                    incomplete_pct = 100 * self.incomplete_games / self.games_played if self.games_played > 0 else 0
+                    print(f"\nGames: {self.games_played}, P1 win rate: {win_rate_p1:.3f}, "
+                          f"Incomplete: {incomplete_pct:.1f}%")
 
         if verbose:
             print(f"\nTraining complete! Total games: {self.games_played}")
             print(f"Final win rates - P1: {self.wins[1]/self.games_played:.3f}, "
                   f"P2: {self.wins[-1]/self.games_played:.3f}")
+            print(f"Incomplete games: {self.incomplete_games} "
+                  f"({100*self.incomplete_games/self.games_played:.1f}%)")
 
         # Save final model
         self.save_checkpoint("model_final.pth")
@@ -173,6 +189,7 @@ class SelfPlayTrainer:
             opponent = self.agent
 
         wins = {1: 0, -1: 0}
+        incomplete = 0
         original_epsilon = self.agent.epsilon
 
         # Set to greedy for evaluation
@@ -186,7 +203,7 @@ class SelfPlayTrainer:
         for _ in tqdm(range(num_games), desc="Evaluating"):
             game = BackgammonGame()
             move_count = 0
-            max_moves = 500
+            max_moves = 3000  # Match training limit
 
             while move_count < max_moves:
                 player = game.current_player
@@ -205,6 +222,17 @@ class SelfPlayTrainer:
                 game.switch_player()
                 move_count += 1
 
+            # If game didn't finish, count as incomplete and assign winner based on progress
+            if winner is None:
+                incomplete += 1
+                # Assign win to player with more pieces off
+                if game.board.off[1] > game.board.off[-1]:
+                    wins[1] += 1
+                elif game.board.off[-1] > game.board.off[1]:
+                    wins[-1] += 1
+                else:
+                    wins[1] += 1  # Tie goes to player 1
+
         # Restore epsilon
         self.agent.epsilon = original_epsilon
         if opponent != self.agent:
@@ -215,5 +243,7 @@ class SelfPlayTrainer:
             'p2_wins': wins[-1],
             'p1_win_rate': wins[1] / num_games,
             'p2_win_rate': wins[-1] / num_games,
-            'total_games': num_games
+            'total_games': num_games,
+            'incomplete': incomplete,
+            'incomplete_rate': incomplete / num_games
         }
