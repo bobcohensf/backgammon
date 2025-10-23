@@ -93,13 +93,38 @@ class SelfPlayTrainer:
         self.incomplete_games += 1
         self.games_played += 1
 
-        # For training purposes, assign winner to whoever has more pieces off
-        if game.board.off[1] > game.board.off[-1]:
+        # Assign winner based on progress (pieces borne off)
+        p1_off = game.board.off[1]
+        p2_off = game.board.off[-1]
+
+        if p1_off > p2_off:
             winner = 1
-        elif game.board.off[-1] > game.board.off[1]:
+        elif p2_off > p1_off:
             winner = -1
         else:
             winner = 1  # Tie goes to player 1
+
+        # IMPORTANT: Perform TD updates even for incomplete games
+        # Use a reward based on progress rather than binary win/loss
+        if training and len(states) > 0:
+            # Calculate reward based on pieces borne off (0.0 to 1.0 scale)
+            # The player whose turn it was last gets evaluated
+            last_player = states[-1][1]
+            player_off = game.board.off[last_player]
+            opponent_off = game.board.off[-last_player]
+
+            # Progress-based reward: (our pieces off - opponent pieces off) / 15
+            # Normalized to roughly 0-1 range
+            progress_reward = (player_off - opponent_off) / 15.0
+            # Clamp to [-1, 1] and shift to [0, 1]
+            terminal_reward = max(0.0, min(1.0, 0.5 + progress_reward))
+
+            states.append((game.board.copy(), last_player))
+            terminal_value = torch.tensor([[terminal_reward]], dtype=torch.float32)
+            values.append(terminal_value)
+
+            # Perform TD learning updates
+            self._td_update(states, values)
 
         self.wins[winner] += 1
         return winner

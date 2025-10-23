@@ -90,7 +90,15 @@ class TDAgent:
         if winner is not None:
             return 1.0 if winner == player else 0.0
 
-        return self.network.evaluate(board, player)
+        # Get network evaluation
+        net_eval = self.network.evaluate(board, player)
+
+        # Add small bonus for bearing off pieces (reward shaping)
+        # This helps guide learning toward the actual goal
+        pieces_off_bonus = (board.off[player] / 15.0) * 0.1  # Up to 0.1 bonus
+        opponent_pieces_off_penalty = (board.off[-player] / 15.0) * 0.1
+
+        return net_eval + pieces_off_bonus - opponent_pieces_off_penalty
 
     def get_state_value(self, board: Board, player: int) -> torch.Tensor:
         """Get state value as a tensor (for training).
