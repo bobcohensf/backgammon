@@ -15,11 +15,11 @@ class BackgammonNet(nn.Module):
     for the player from whose perspective the board is encoded.
     """
 
-    def __init__(self, input_size=198, hidden_sizes=[256, 128, 64]):
+    def __init__(self, input_size=196, hidden_sizes=[256, 128, 64]):
         """Initialize the network.
 
         Args:
-            input_size: Size of input feature vector (default 198 from board encoding)
+            input_size: Size of input feature vector (default 196 from board encoding)
             hidden_sizes: List of hidden layer sizes
         """
         super(BackgammonNet, self).__init__()

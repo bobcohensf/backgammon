@@ -78,10 +78,10 @@ This approach was made famous by TD-Gammon (1992), which achieved expert-level p
 
 ### Network Architecture
 
-- **Input layer**: 198 features encoding the board state
-  - For each of 24 points: piece counts (our/opponent)
-  - Bar pieces (our/opponent)
-  - Borne-off pieces (our/opponent)
+- **Input layer**: 196 features encoding the board state
+  - For each of 24 points: 8 features (piece counts our/opponent)
+  - Bar pieces (our/opponent): 2 features
+  - Borne-off pieces (our/opponent): 2 features
 
 - **Hidden layers**: 256 → 128 → 64 neurons with ReLU activation
 
@@ -151,8 +151,8 @@ The engine generates all legal moves for a given dice roll:
 
 ### Features for Neural Network
 
-Board encoding creates 198 features:
-- 24 points × 8 features each (piece counts)
+Board encoding creates 196 features:
+- 24 points × 8 features each = 192 (piece counts)
 - 2 features for bar pieces
 - 2 features for borne-off pieces
 - Normalized for neural network training
@@ -173,7 +173,7 @@ Edit `ai/network.py` to modify the neural network:
 
 ```python
 network = BackgammonNet(
-    input_size=198,
+    input_size=196,  # Must match board encoding
     hidden_sizes=[512, 256, 128]  # Deeper network
 )
 ```

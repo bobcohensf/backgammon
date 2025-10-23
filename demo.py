@@ -50,7 +50,7 @@ def demo_neural_network():
     # Create network
     network = BackgammonNet()
     print(f"\nCreated neural network:")
-    print(f"  Input size: 198 features")
+    print(f"  Input size: 196 features")
     print(f"  Hidden layers: 256 → 128 → 64")
     print(f"  Output: Win probability (0-1)")
 
