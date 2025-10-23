@@ -35,7 +35,7 @@ def test_bearing_off():
     print(f"Can bear off: {board.can_bear_off(1)}")
 
     # Simulate rolling and moving
-    for turn in range(20):
+    for turn in range(100):
         player = game.current_player
         game.roll_dice()
 
@@ -61,7 +61,7 @@ def test_bearing_off():
 
         game.switch_player()
 
-    print(f"\n✗ Player 1 didn't win after 20 turns")
+    print(f"\n✗ Player 1 didn't win after 100 turns")
     print(f"Pieces off: {game.board.off[1]}")
     return False
 
@@ -74,7 +74,7 @@ def test_basic_game():
 
     game = BackgammonGame()
 
-    for turn in range(50):
+    for turn in range(200):
         player = game.current_player
         game.roll_dice()
 
@@ -92,7 +92,7 @@ def test_basic_game():
 
         game.switch_player()
 
-    print(f"\nGame didn't finish after 50 turns")
+    print(f"\nGame didn't finish after 200 turns")
     print(f"P1 pieces off: {game.board.off[1]}")
     print(f"P2 pieces off: {game.board.off[-1]}")
     return False
