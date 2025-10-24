@@ -444,6 +444,10 @@ function updateHighlights() {
         point.classList.remove('highlight', 'selected');
     });
 
+    // Clear OFF area highlights
+    document.getElementById('off-area-top').classList.remove('highlight');
+    document.getElementById('off-area-bottom').classList.remove('highlight');
+
     // Highlight selected point
     if (selectedPoint !== null && selectedPoint !== 0) {
         const selectedElement = document.querySelector(`[data-point="${selectedPoint}"]`);
@@ -454,7 +458,14 @@ function updateHighlights() {
 
     // Highlight valid destinations
     validDestinations.forEach(dest => {
-        if (dest !== 0 && dest !== 25) { // 0 and 25 are bearing off
+        if (dest === 25) {
+            // Player 1 bearing off - highlight top OFF area
+            document.getElementById('off-area-top').classList.add('highlight');
+        } else if (dest === 0) {
+            // Player 2 bearing off - highlight bottom OFF area
+            document.getElementById('off-area-bottom').classList.add('highlight');
+        } else {
+            // Regular point destination
             const destElement = document.querySelector(`[data-point="${dest}"]`);
             if (destElement) {
                 destElement.classList.add('highlight');
@@ -474,6 +485,18 @@ function updateHighlights() {
     };
     document.getElementById('bar-player-2').onclick = () => {
         if (currentPlayer === -1) handleBarClick();
+    };
+
+    // Add click handlers to OFF areas for bearing off
+    document.getElementById('off-area-top').onclick = () => {
+        if (validDestinations.includes(25)) {
+            stageMove(selectedPoint, 25);
+        }
+    };
+    document.getElementById('off-area-bottom').onclick = () => {
+        if (validDestinations.includes(0)) {
+            stageMove(selectedPoint, 0);
+        }
     };
 }
 
