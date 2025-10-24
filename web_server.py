@@ -126,7 +126,8 @@ def roll_dice(game_id):
     dice = game.roll_dice()
     session['dice_rolled'] = True
     session['staged_moves'] = []
-    session['original_dice'] = dice[:]  # Store original dice for reset
+    # Store original dice as list (roll_dice returns tuple, but game.dice is a list)
+    session['original_dice'] = game.dice[:]  # Copy game.dice which is always a list
 
     # Create backup of current board for reset functionality
     session['original_board'] = {
@@ -267,7 +268,7 @@ def reset_moves(game_id):
         # Store the original dice on first roll
         session['original_dice'] = game.dice[:]
 
-    game.dice = session['original_dice'][:]
+    game.dice = session['original_dice'][:]  # Restore as list
 
     # Clear staged moves
     session['staged_moves'] = []
