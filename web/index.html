@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backgammon Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Backgammon</h1>
+
+        <div class="game-info">
+            <div class="info-panel">
+                <h3>Current Player: <span id="current-player">Player 1 (X)</span></h3>
+                <div class="dice-container">
+                    <h3>Dice: <span id="dice-display">-</span></h3>
+                </div>
+                <div class="status-message" id="status-message">
+                    Click "New Game" to start!
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="new-game-btn" class="btn btn-primary">New Game</button>
+            <button id="roll-dice-btn" class="btn btn-secondary" disabled>Roll Dice</button>
+            <button id="reset-move-btn" class="btn btn-warning" disabled>Reset Move</button>
+            <button id="accept-move-btn" class="btn btn-success" disabled>Accept Move</button>
+        </div>
+
+        <div class="board-container">
+            <!-- Top half of board (points 13-24) -->
+            <div class="board-half board-top">
+                <div class="board-section board-section-left">
+                    <!-- Points 13-18 -->
+                    <div class="point" data-point="13"><div class="checkers" id="point-13"></div><span class="point-label">13</span></div>
+                    <div class="point" data-point="14"><div class="checkers" id="point-14"></div><span class="point-label">14</span></div>
+                    <div class="point" data-point="15"><div class="checkers" id="point-15"></div><span class="point-label">15</span></div>
+                    <div class="point" data-point="16"><div class="checkers" id="point-16"></div><span class="point-label">16</span></div>
+                    <div class="point" data-point="17"><div class="checkers" id="point-17"></div><span class="point-label">17</span></div>
+                    <div class="point" data-point="18"><div class="checkers" id="point-18"></div><span class="point-label">18</span></div>
+                </div>
+
+                <div class="bar" id="bar-top">
+                    <div class="bar-label">BAR</div>
+                    <div class="bar-checkers" id="bar-player-2"></div>
+                </div>
+
+                <div class="board-section board-section-right">
+                    <!-- Points 19-24 -->
+                    <div class="point" data-point="19"><div class="checkers" id="point-19"></div><span class="point-label">19</span></div>
+                    <div class="point" data-point="20"><div class="checkers" id="point-20"></div><span class="point-label">20</span></div>
+                    <div class="point" data-point="21"><div class="checkers" id="point-21"></div><span class="point-label">21</span></div>
+                    <div class="point" data-point="22"><div class="checkers" id="point-22"></div><span class="point-label">22</span></div>
+                    <div class="point" data-point="23"><div class="checkers" id="point-23"></div><span class="point-label">23</span></div>
+                    <div class="point" data-point="24"><div class="checkers" id="point-24"></div><span class="point-label">24</span></div>
+                </div>
+
+                <div class="off-area" id="off-area-top">
+                    <div class="off-label">OFF</div>
+                    <div class="off-count" id="off-player-1">0</div>
+                </div>
+            </div>
+
+            <!-- Bottom half of board (points 12-1) -->
+            <div class="board-half board-bottom">
+                <div class="board-section board-section-left">
+                    <!-- Points 12-7 -->
+                    <div class="point" data-point="12"><div class="checkers" id="point-12"></div><span class="point-label">12</span></div>
+                    <div class="point" data-point="11"><div class="checkers" id="point-11"></div><span class="point-label">11</span></div>
+                    <div class="point" data-point="10"><div class="checkers" id="point-10"></div><span class="point-label">10</span></div>
+                    <div class="point" data-point="9"><div class="checkers" id="point-9"></div><span class="point-label">9</span></div>
+                    <div class="point" data-point="8"><div class="checkers" id="point-8"></div><span class="point-label">8</span></div>
+                    <div class="point" data-point="7"><div class="checkers" id="point-7"></div><span class="point-label">7</span></div>
+                </div>
+
+                <div class="bar" id="bar-bottom">
+                    <div class="bar-checkers" id="bar-player-1"></div>
+                    <div class="bar-label">BAR</div>
+                </div>
+
+                <div class="board-section board-section-right">
+                    <!-- Points 6-1 -->
+                    <div class="point" data-point="6"><div class="checkers" id="point-6"></div><span class="point-label">6</span></div>
+                    <div class="point" data-point="5"><div class="checkers" id="point-5"></div><span class="point-label">5</span></div>
+                    <div class="point" data-point="4"><div class="checkers" id="point-4"></div><span class="point-label">4</span></div>
+                    <div class="point" data-point="3"><div class="checkers" id="point-3"></div><span class="point-label">3</span></div>
+                    <div class="point" data-point="2"><div class="checkers" id="point-2"></div><span class="point-label">2</span></div>
+                    <div class="point" data-point="1"><div class="checkers" id="point-1"></div><span class="point-label">1</span></div>
+                </div>
+
+                <div class="off-area" id="off-area-bottom">
+                    <div class="off-count" id="off-player-2">0</div>
+                    <div class="off-label">OFF</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-instructions">
+            <h3>How to Play:</h3>
+            <ol>
+                <li>Click "New Game" to start a new game</li>
+                <li>Click "Roll Dice" to roll the dice for the current player</li>
+                <li>Click on a checker to select it (valid destinations will be highlighted)</li>
+                <li>Click on a highlighted destination to move the checker</li>
+                <li>Click "Reset Move" to undo all moves and try again</li>
+                <li>Click "Accept Move" to complete your turn</li>
+                <li>Player 1 (X) moves UP (1→24), Player 2 (O) moves DOWN (24→1)</li>
+            </ol>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
