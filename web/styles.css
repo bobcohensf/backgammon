@@ -182,24 +182,26 @@ h1 {
 }
 
 /* Alternating triangle colors */
+/* Top triangles point DOWN (base at top edge, apex at center) */
 .board-top .point:nth-child(odd) {
     background: linear-gradient(to bottom, #D2691E 0%, #8B4513 100%);
-    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
 }
 
 .board-top .point:nth-child(even) {
     background: linear-gradient(to bottom, #F4A460 0%, #CD853F 100%);
-    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
 }
 
+/* Bottom triangles point UP (base at bottom edge, apex at center) */
 .board-bottom .point:nth-child(odd) {
     background: linear-gradient(to top, #D2691E 0%, #8B4513 100%);
-    clip-path: polygon(50% 100%, 0% 0%, 100% 0%);
+    clip-path: polygon(0% 100%, 100% 100%, 50% 0%);
 }
 
 .board-bottom .point:nth-child(even) {
     background: linear-gradient(to top, #F4A460 0%, #CD853F 100%);
-    clip-path: polygon(50% 100%, 0% 0%, 100% 0%);
+    clip-path: polygon(0% 100%, 100% 100%, 50% 0%);
 }
 
 .point.highlight {
