@@ -269,7 +269,7 @@ async function handleBarClick() {
         return;
     }
 
-    await selectPoint(25); // 25 represents the bar
+    await selectPoint(0); // 0 represents the bar
 }
 
 /**
@@ -395,7 +395,7 @@ function renderBoard(boardData) {
 
     if (boardData.bar[1] > 0) {
         for (let i = 0; i < Math.min(boardData.bar[1], 3); i++) {
-            const checker = createChecker(1, 25);
+            const checker = createChecker(1, 0);
             barPlayer1.appendChild(checker);
         }
         if (boardData.bar[1] > 3) {
@@ -405,7 +405,7 @@ function renderBoard(boardData) {
 
     if (boardData.bar[-1] > 0) {
         for (let i = 0; i < Math.min(boardData.bar[-1], 3); i++) {
-            const checker = createChecker(-1, 25);
+            const checker = createChecker(-1, 0);
             barPlayer2.appendChild(checker);
         }
         if (boardData.bar[-1] > 3) {
@@ -445,7 +445,7 @@ function updateHighlights() {
     });
 
     // Highlight selected point
-    if (selectedPoint !== null && selectedPoint !== 25) {
+    if (selectedPoint !== null && selectedPoint !== 0) {
         const selectedElement = document.querySelector(`[data-point="${selectedPoint}"]`);
         if (selectedElement) {
             selectedElement.classList.add('selected');
@@ -454,7 +454,7 @@ function updateHighlights() {
 
     // Highlight valid destinations
     validDestinations.forEach(dest => {
-        if (dest !== 0) { // 0 is bearing off
+        if (dest !== 0 && dest !== 25) { // 0 and 25 are bearing off
             const destElement = document.querySelector(`[data-point="${dest}"]`);
             if (destElement) {
                 destElement.classList.add('highlight');
