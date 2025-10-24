@@ -32,7 +32,7 @@ python web_server.py
 2. Open your web browser and navigate to:
 
 ```
-http://localhost:5000
+http://localhost:5005
 ```
 
 3. The server will automatically load the trained AI model from `models/model_final.pth` if available.

@@ -66,7 +66,7 @@ def new_game():
 
     # Initialize game and AI agent
     game = BackgammonGame()
-    agent = TDAgent(greedy=True)  # AI plays optimally
+    agent = TDAgent(epsilon=0.0)  # AI plays optimally (no exploration)
 
     # Try to load trained model if it exists
     model_path = 'models/model_final.pth'
@@ -380,5 +380,5 @@ def get_valid_destinations(game_id, from_point):
 
 if __name__ == '__main__':
     print("Starting Backgammon Web Server...")
-    print("Open your browser to http://localhost:5000")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    print("Open your browser to http://localhost:5005")
+    app.run(debug=True, host='0.0.0.0', port=5005)
