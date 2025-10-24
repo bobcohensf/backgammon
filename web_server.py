@@ -126,6 +126,7 @@ def roll_dice(game_id):
     dice = game.roll_dice()
     session['dice_rolled'] = True
     session['staged_moves'] = []
+    session['original_dice'] = dice[:]  # Store original dice for reset
 
     # Create backup of current board for reset functionality
     session['original_board'] = {
@@ -134,8 +135,22 @@ def roll_dice(game_id):
         'off': game.board.off.copy()
     }
 
+    # Debug logging
+    print(f"\n=== ROLL DICE DEBUG ===")
+    print(f"Current player: {game.current_player}")
+    print(f"Dice rolled: {dice}")
+    print(f"game.dice: {game.dice}")
+
     # Check if there are any legal moves
     legal_moves = game.get_legal_moves(game.current_player, game.dice)
+    print(f"Legal move sequences: {len(legal_moves)}")
+    if legal_moves:
+        print(f"First few legal moves:")
+        for i, move_seq in enumerate(legal_moves[:5]):
+            if move_seq.moves:
+                moves_str = " -> ".join([f"{m.from_point}→{m.to_point}" for m in move_seq.moves])
+                print(f"  {i}: {moves_str}")
+    print("=" * 40 + "\n")
 
     return jsonify({
         'dice': dice,
@@ -363,19 +378,33 @@ def get_valid_destinations(game_id, from_point):
     if not session['dice_rolled']:
         return jsonify({'destinations': []})
 
+    # Debug logging
+    print(f"\n=== GET VALID DESTINATIONS DEBUG ===")
+    print(f"From point: {from_point}")
+    print(f"Current player: {game.current_player}")
+    print(f"Dice: {game.dice}")
+    print(f"Board point {from_point}: {game.board.points[from_point] if 1 <= from_point <= 24 else 'N/A'}")
+    print(f"Bar: {game.board.bar}")
+
     # Get all legal moves from current board state
     legal_moves = game.get_legal_moves(game.current_player, game.dice)
+    print(f"Total legal move sequences: {len(legal_moves)}")
 
     # Find destinations for pieces at from_point
     destinations = set()
 
-    for move_seq in legal_moves:
+    for i, move_seq in enumerate(legal_moves):
         # Check if this move sequence starts with a move from from_point
         # Always check first move (index 0) since legal_moves are from current state
         if len(move_seq.moves) > 0:
             next_move = move_seq.moves[0]
+            print(f"  Sequence {i}: first move from {next_move.from_point} to {next_move.to_point}")
             if next_move.from_point == from_point:
                 destinations.add(next_move.to_point)
+                print(f"    -> MATCH! Added destination {next_move.to_point}")
+
+    print(f"Valid destinations: {destinations}")
+    print("=" * 40 + "\n")
 
     return jsonify({
         'destinations': list(destinations)
