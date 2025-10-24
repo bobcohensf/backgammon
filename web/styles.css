@@ -237,6 +237,7 @@ h1 {
     align-items: center;
     padding: 5px;
     gap: 2px;
+    z-index: 10;
 }
 
 .board-bottom .checkers {
@@ -261,6 +262,8 @@ h1 {
     font-weight: bold;
     font-size: 1.2em;
     color: #333;
+    position: relative;
+    z-index: 20;
 }
 
 .checker.player-1 {

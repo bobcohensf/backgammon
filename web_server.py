@@ -185,15 +185,18 @@ def stage_move(game_id):
         return jsonify({'error': 'Must roll dice first'}), 400
 
     # Validate this move is legal
+    # Note: legal_moves are calculated from the CURRENT board state (after previous staged moves)
+    # so we always look at the first move in each sequence (index 0)
     legal_moves = game.get_legal_moves(game.current_player, game.dice)
 
-    # Find if any legal move sequence contains this move as the next move
+    # Find if any legal move sequence starts with this move
     valid = False
     die_used = None
 
     for move_seq in legal_moves:
-        if len(move_seq.moves) > len(session['staged_moves']):
-            next_move = move_seq.moves[len(session['staged_moves'])]
+        if len(move_seq.moves) > 0:
+            # Always check the first move since legal_moves are from current state
+            next_move = move_seq.moves[0]
             if next_move.from_point == from_point and next_move.to_point == to_point:
                 valid = True
                 die_used = next_move.die_value
@@ -360,7 +363,7 @@ def get_valid_destinations(game_id, from_point):
     if not session['dice_rolled']:
         return jsonify({'destinations': []})
 
-    # Get all legal moves
+    # Get all legal moves from current board state
     legal_moves = game.get_legal_moves(game.current_player, game.dice)
 
     # Find destinations for pieces at from_point
@@ -368,8 +371,9 @@ def get_valid_destinations(game_id, from_point):
 
     for move_seq in legal_moves:
         # Check if this move sequence starts with a move from from_point
-        if len(move_seq.moves) > len(session['staged_moves']):
-            next_move = move_seq.moves[len(session['staged_moves'])]
+        # Always check first move (index 0) since legal_moves are from current state
+        if len(move_seq.moves) > 0:
+            next_move = move_seq.moves[0]
             if next_move.from_point == from_point:
                 destinations.add(next_move.to_point)
 
