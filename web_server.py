@@ -32,7 +32,10 @@ def serialize_board(game):
         'off': game.board.off.copy(),
         'current_player': game.current_player,
         'dice': game.dice if hasattr(game, 'dice') and game.dice else [],
-        'winner': game.is_game_over()
+        'winner': game.is_game_over(),
+        'cube_value': game.board.cube_value,
+        'cube_owner': game.board.cube_owner,
+        'double_offered_by': game.board.double_offered_by
     }
 
 
@@ -61,7 +64,10 @@ def index():
 
 @app.route('/api/new_game', methods=['POST'])
 def new_game():
-    """Initialize a new game session."""
+    """Initialize a new game session or match."""
+    data = request.json or {}
+    match_length = data.get('match_length', 7)  # Default to 7 point match
+
     game_id = str(uuid.uuid4())
 
     # Initialize game and AI agent
@@ -82,13 +88,22 @@ def new_game():
         'agent': agent,
         'staged_moves': [],  # Moves staged but not yet accepted
         'original_board': None,  # Backup for reset
-        'dice_rolled': False
+        'dice_rolled': False,
+        # Match state
+        'match_length': match_length,
+        'match_score': {1: 0, -1: 0},
+        'games_won': {1: 0, -1: 0},
+        'crawford_game': False,  # Whether we're in Crawford game
+        'post_crawford': False,  # Whether we're post-Crawford
+        'game_history': []  # History of game results
     }
 
     return jsonify({
         'game_id': game_id,
         'board': serialize_board(game),
-        'message': 'New game created. Roll dice to start!'
+        'match_score': {1: 0, -1: 0},
+        'match_length': match_length,
+        'message': f'New match to {match_length} points started! Roll dice to begin.'
     })
 
 
@@ -104,7 +119,10 @@ def get_game_state(game_id):
     return jsonify({
         'board': serialize_board(game),
         'staged_moves': session['staged_moves'],
-        'dice_rolled': session['dice_rolled']
+        'dice_rolled': session['dice_rolled'],
+        'match_score': session['match_score'],
+        'match_length': session['match_length'],
+        'crawford_game': session['crawford_game']
     })
 
 
@@ -294,10 +312,79 @@ def accept_turn(game_id):
     # Check if game is over
     winner = game.is_game_over()
     if winner is not None:
+        # Calculate points for this game
+        points = game.board.get_points_for_win(winner)
+
+        # Update match score
+        session['match_score'][winner] += points
+        session['games_won'][winner] += 1
+
+        # Record game result
+        game_result = {
+            'winner': winner,
+            'points': points,
+            'cube_value': game.board.cube_value,
+            'is_gammon': game.board.is_gammon(winner),
+            'is_backgammon': game.board.is_backgammon(winner)
+        }
+        session['game_history'].append(game_result)
+
+        # Check if match is over
+        match_winner = None
+        if session['match_score'][1] >= session['match_length']:
+            match_winner = 1
+        elif session['match_score'][-1] >= session['match_length']:
+            match_winner = -1
+
+        if match_winner is not None:
+            return jsonify({
+                'board': serialize_board(game),
+                'game_over': True,
+                'match_over': True,
+                'winner': winner,
+                'match_winner': match_winner,
+                'match_score': session['match_score'],
+                'points_scored': points,
+                'game_type': 'backgammon' if game_result['is_backgammon'] else ('gammon' if game_result['is_gammon'] else 'normal'),
+                'game_history': session['game_history']
+            })
+
+        # Match continues - check for Crawford rule
+        crawford_status = ''
+        if not session['crawford_game'] and not session['post_crawford']:
+            # Check if anyone is one point away from winning
+            for player in [1, -1]:
+                if session['match_score'][player] == session['match_length'] - 1:
+                    session['crawford_game'] = True
+                    crawford_status = ' (Crawford Game - no doubling cube)'
+                    break
+        elif session['crawford_game']:
+            # End Crawford game, enter post-Crawford
+            session['crawford_game'] = False
+            session['post_crawford'] = True
+
+        # Start new game in the match
+        game.board = game.board.__class__()  # Reset board
+        game.current_player = 1  # Player 1 always starts
+        game.dice = []
+
+        # Reset turn state
+        session['dice_rolled'] = False
+        session['staged_moves'] = []
+        session['original_board'] = None
+        session['original_dice'] = None
+
         return jsonify({
             'board': serialize_board(game),
             'game_over': True,
-            'winner': winner
+            'match_over': False,
+            'winner': winner,
+            'match_score': session['match_score'],
+            'match_length': session['match_length'],
+            'points_scored': points,
+            'game_type': 'backgammon' if game_result['is_backgammon'] else ('gammon' if game_result['is_gammon'] else 'normal'),
+            'crawford_game': session['crawford_game'],
+            'message': f"Game won by Player {winner}! {points} points scored.{crawford_status} Match score: {session['match_score'][1]}-{session['match_score'][-1]}. Click 'Roll Dice' to start next game."
         })
 
     # Switch to next player
@@ -310,14 +397,11 @@ def accept_turn(game_id):
     session['original_dice'] = None
     game.dice = []
 
-    # Check if game is over after this turn
-    winner = game.is_game_over()
-
     return jsonify({
         'board': serialize_board(game),
         'message': 'Turn accepted',
-        'game_over': winner is not None,
-        'winner': winner
+        'game_over': False,
+        'match_score': session['match_score']
     })
 
 
@@ -409,6 +493,161 @@ def get_valid_destinations(game_id, from_point):
 
     return jsonify({
         'destinations': list(destinations)
+    })
+
+
+@app.route('/api/offer_double/<game_id>', methods=['POST'])
+def offer_double(game_id):
+    """Offer a double to the opponent."""
+    if game_id not in games:
+        return jsonify({'error': 'Game not found'}), 404
+
+    session = games[game_id]
+    game = session['game']
+
+    # Check if in Crawford game
+    if session['crawford_game']:
+        return jsonify({'error': 'Cannot double during Crawford game'}), 400
+
+    # Check if dice have been rolled
+    if session['dice_rolled']:
+        return jsonify({'error': 'Cannot double after rolling dice'}), 400
+
+    try:
+        game.board.offer_double(game.current_player)
+
+        return jsonify({
+            'board': serialize_board(game),
+            'message': f'Player {game.current_player} offers a double to {game.board.cube_value * 2}!'
+        })
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/accept_double/<game_id>', methods=['POST'])
+def accept_double(game_id):
+    """Accept a double offer."""
+    if game_id not in games:
+        return jsonify({'error': 'Game not found'}), 404
+
+    session = games[game_id]
+    game = session['game']
+
+    try:
+        game.board.accept_double(game.current_player)
+
+        return jsonify({
+            'board': serialize_board(game),
+            'message': f'Player {game.current_player} accepts! Cube is now {game.board.cube_value}. Roll dice to continue.'
+        })
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/reject_double/<game_id>', methods=['POST'])
+def reject_double(game_id):
+    """Reject a double offer (forfeit the game)."""
+    if game_id not in games:
+        return jsonify({'error': 'Game not found'}), 404
+
+    session = games[game_id]
+    game = session['game']
+
+    if game.board.double_offered_by is None:
+        return jsonify({'error': 'No double has been offered'}), 400
+
+    # The player who offered the double wins
+    winner = game.board.double_offered_by
+    points = game.board.cube_value  # Win current cube value (not doubled)
+
+    game.board.reject_double()
+
+    # Update match score
+    session['match_score'][winner] += points
+    session['games_won'][winner] += 1
+
+    # Record game result
+    game_result = {
+        'winner': winner,
+        'points': points,
+        'cube_value': game.board.cube_value,
+        'is_gammon': False,
+        'is_backgammon': False,
+        'double_rejected': True
+    }
+    session['game_history'].append(game_result)
+
+    # Check if match is over
+    match_winner = None
+    if session['match_score'][1] >= session['match_length']:
+        match_winner = 1
+    elif session['match_score'][-1] >= session['match_length']:
+        match_winner = -1
+
+    if match_winner is not None:
+        return jsonify({
+            'board': serialize_board(game),
+            'game_over': True,
+            'match_over': True,
+            'winner': winner,
+            'match_winner': match_winner,
+            'match_score': session['match_score'],
+            'points_scored': points,
+            'double_rejected': True,
+            'message': f'Double rejected! Player {winner} wins {points} point(s). Match over!'
+        })
+
+    # Match continues - check for Crawford rule
+    crawford_status = ''
+    if not session['crawford_game'] and not session['post_crawford']:
+        for player in [1, -1]:
+            if session['match_score'][player] == session['match_length'] - 1:
+                session['crawford_game'] = True
+                crawford_status = ' (Crawford Game - no doubling cube)'
+                break
+    elif session['crawford_game']:
+        session['crawford_game'] = False
+        session['post_crawford'] = True
+
+    # Start new game in the match
+    game.board = game.board.__class__()  # Reset board
+    game.current_player = 1
+    game.dice = []
+
+    # Reset turn state
+    session['dice_rolled'] = False
+    session['staged_moves'] = []
+    session['original_board'] = None
+    session['original_dice'] = None
+
+    return jsonify({
+        'board': serialize_board(game),
+        'game_over': True,
+        'match_over': False,
+        'winner': winner,
+        'match_score': session['match_score'],
+        'points_scored': points,
+        'double_rejected': True,
+        'crawford_game': session['crawford_game'],
+        'message': f"Double rejected! Player {winner} wins {points} point(s).{crawford_status} Match score: {session['match_score'][1]}-{session['match_score'][-1]}. Click 'Roll Dice' to start next game."
+    })
+
+
+@app.route('/api/match_stats/<game_id>', methods=['GET'])
+def get_match_stats(game_id):
+    """Get match statistics."""
+    if game_id not in games:
+        return jsonify({'error': 'Game not found'}), 404
+
+    session = games[game_id]
+
+    return jsonify({
+        'match_score': session['match_score'],
+        'match_length': session['match_length'],
+        'games_won': session['games_won'],
+        'crawford_game': session['crawford_game'],
+        'post_crawford': session['post_crawford'],
+        'game_history': session['game_history']
     })
 
 

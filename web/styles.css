@@ -440,3 +440,198 @@ h1 {
         align-items: flex-start;
     }
 }
+
+/* Match Score Panel */
+.match-score-panel {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    color: white;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.match-score-panel h2 {
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 1.8em;
+}
+
+.match-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.score-display {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 20px;
+    font-size: 1.3em;
+    font-weight: bold;
+}
+
+.player-score {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 10px 20px;
+    border-radius: 8px;
+    min-width: 150px;
+    text-align: center;
+}
+
+.match-target {
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+.crawford-indicator {
+    text-align: center;
+    background: rgba(255, 193, 7, 0.9);
+    color: #333;
+    padding: 8px;
+    border-radius: 5px;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+/* Doubling Cube */
+.cube-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.cube-owner {
+    font-size: 0.9em;
+    color: #6c757d;
+    font-style: italic;
+}
+
+#cube-display {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #fd7e14;
+    min-width: 40px;
+}
+
+.btn-cube {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    color: white;
+}
+
+.btn-cube:hover:not(:disabled) {
+    background: linear-gradient(135deg, #ee5a6f 0%, #cc4b5c 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(238, 90, 111, 0.4);
+}
+
+.btn-cube:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* Double Offer Panel */
+.double-offer-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    min-width: 400px;
+}
+
+.double-offer-content {
+    text-align: center;
+}
+
+.double-offer-content h3 {
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 1.5em;
+}
+
+.double-offer-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+}
+
+/* Match Statistics Panel */
+.match-stats-panel {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    margin-top: 20px;
+}
+
+.match-stats-panel h3 {
+    color: #333;
+    margin-bottom: 15px;
+    font-size: 1.3em;
+    text-align: center;
+}
+
+.stats-content {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: white;
+    border-radius: 8px;
+    font-size: 1.1em;
+}
+
+.game-history {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.game-history h4 {
+    color: #495057;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+}
+
+#history-list {
+    font-size: 0.95em;
+    color: #6c757d;
+}
+
+#history-list ul {
+    list-style: none;
+    padding: 0;
+}
+
+#history-list li {
+    padding: 5px 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+#history-list li:last-child {
+    border-bottom: none;
+}

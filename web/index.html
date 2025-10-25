@@ -10,11 +10,29 @@
     <div class="container">
         <h1>Backgammon</h1>
 
+        <div class="match-score-panel">
+            <h2>Match Score</h2>
+            <div class="match-info">
+                <div class="score-display">
+                    <span class="player-score" id="player1-score">Player 1: 0</span>
+                    <span class="match-target" id="match-target">First to 7</span>
+                    <span class="player-score" id="player2-score">Player 2: 0</span>
+                </div>
+                <div class="crawford-indicator" id="crawford-indicator" style="display: none;">
+                    Crawford Game - No Doubling
+                </div>
+            </div>
+        </div>
+
         <div class="game-info">
             <div class="info-panel">
                 <h3>Current Player: <span id="current-player">Player 1 (X)</span></h3>
                 <div class="dice-container">
                     <h3>Dice: <span id="dice-display">-</span></h3>
+                </div>
+                <div class="cube-container">
+                    <h3>Cube: <span id="cube-display">1</span></h3>
+                    <div class="cube-owner" id="cube-owner">Center</div>
                 </div>
                 <div class="status-message" id="status-message">
                     Click "New Game" to start!
@@ -25,8 +43,19 @@
         <div class="controls">
             <button id="new-game-btn" class="btn btn-primary">New Game</button>
             <button id="roll-dice-btn" class="btn btn-secondary" disabled>Roll Dice</button>
+            <button id="double-btn" class="btn btn-cube" disabled>Double</button>
             <button id="reset-move-btn" class="btn btn-warning" disabled>Reset Move</button>
             <button id="accept-move-btn" class="btn btn-success" disabled>Accept Move</button>
+        </div>
+
+        <div class="double-offer-panel" id="double-offer-panel" style="display: none;">
+            <div class="double-offer-content">
+                <h3 id="double-offer-text">Player offers to double!</h3>
+                <div class="double-offer-buttons">
+                    <button id="accept-double-btn" class="btn btn-success">Accept</button>
+                    <button id="reject-double-btn" class="btn btn-danger">Reject (Forfeit)</button>
+                </div>
+            </div>
         </div>
 
         <div class="board-container">
@@ -100,14 +129,30 @@
         <div class="game-instructions">
             <h3>How to Play:</h3>
             <ol>
-                <li>Click "New Game" to start a new game</li>
+                <li>Click "New Game" to start a new match</li>
                 <li>Click "Roll Dice" to roll the dice for the current player</li>
+                <li>Click "Double" before rolling to offer a double (increases stakes)</li>
                 <li>Click on a checker to select it (valid destinations will be highlighted)</li>
                 <li>Click on a highlighted destination to move the checker</li>
                 <li>Click "Reset Move" to undo all moves and try again</li>
                 <li>Click "Accept Move" to complete your turn</li>
                 <li>Player 1 (X) moves UP (1→24), Player 2 (O) moves DOWN (24→1)</li>
+                <li>First player to reach the target score wins the match!</li>
             </ol>
+        </div>
+
+        <div class="match-stats-panel" id="match-stats-panel">
+            <h3>Match Statistics</h3>
+            <div class="stats-content">
+                <div class="stat-row">
+                    <span>Games Won:</span>
+                    <span id="games-won">Player 1: 0 | Player 2: 0</span>
+                </div>
+                <div class="game-history" id="game-history">
+                    <h4>Game History:</h4>
+                    <div id="history-list">No games played yet</div>
+                </div>
+            </div>
         </div>
     </div>
 

@@ -56,11 +56,19 @@ class Board:
         # Off: pieces that have been borne off
         self.off = {1: 0, -1: 0}
 
+        # Doubling cube state
+        self.cube_value = 1  # Current stake (1, 2, 4, 8, 16, 32, 64)
+        self.cube_owner = None  # None (center), 1, or -1 (who can double next)
+        self.double_offered_by = None  # Track if a double is currently offered
+
     def copy(self):
         """Create a deep copy of the board."""
         new_board = Board(self.points.copy())
         new_board.bar = self.bar.copy()
         new_board.off = self.off.copy()
+        new_board.cube_value = self.cube_value
+        new_board.cube_owner = self.cube_owner
+        new_board.double_offered_by = self.double_offered_by
         return new_board
 
     def get_piece_count(self, point: int, player: int) -> int:
@@ -221,6 +229,122 @@ class Board:
                     return False
 
         return True
+
+    def can_offer_double(self, player: int) -> bool:
+        """Check if a player can offer a double.
+
+        Args:
+            player: 1 or -1
+
+        Returns:
+            True if player can double
+        """
+        # Can't double if cube is at maximum (64)
+        if self.cube_value >= 64:
+            return False
+
+        # Can double if cube is in center or if player owns it
+        return self.cube_owner is None or self.cube_owner == player
+
+    def offer_double(self, player: int):
+        """Offer a double to the opponent.
+
+        Args:
+            player: Player offering the double (1 or -1)
+        """
+        if not self.can_offer_double(player):
+            raise ValueError(f"Player {player} cannot offer a double")
+
+        self.double_offered_by = player
+
+    def accept_double(self, player: int):
+        """Accept a double offer.
+
+        Args:
+            player: Player accepting the double (1 or -1)
+        """
+        if self.double_offered_by is None:
+            raise ValueError("No double has been offered")
+
+        opponent = -player
+        if self.double_offered_by != opponent:
+            raise ValueError("Only the opponent's double can be accepted")
+
+        # Double the cube value and give ownership to accepting player
+        self.cube_value *= 2
+        self.cube_owner = player
+        self.double_offered_by = None
+
+    def reject_double(self):
+        """Reject a double offer (forfeit the game)."""
+        if self.double_offered_by is None:
+            raise ValueError("No double has been offered")
+
+        self.double_offered_by = None
+
+    def is_gammon(self, winner: int) -> bool:
+        """Check if the win is a gammon (opponent has borne off no pieces).
+
+        Args:
+            winner: The winning player (1 or -1)
+
+        Returns:
+            True if this is a gammon
+        """
+        loser = -winner
+        return self.off[loser] == 0
+
+    def is_backgammon(self, winner: int) -> bool:
+        """Check if the win is a backgammon (opponent has pieces in winner's home or on bar).
+
+        Args:
+            winner: The winning player (1 or -1)
+
+        Returns:
+            True if this is a backgammon
+        """
+        if not self.is_gammon(winner):
+            return False
+
+        loser = -winner
+
+        # Check if loser has pieces on bar
+        if self.bar[loser] > 0:
+            return True
+
+        # Check if loser has pieces in winner's home board
+        if winner == 1:
+            # Winner is player 1, home is 19-24
+            # Check if loser (player -1) has pieces in points 19-24
+            for point in range(19, 25):
+                if self.points[point] < 0:
+                    return True
+        else:
+            # Winner is player -1, home is 1-6
+            # Check if loser (player 1) has pieces in points 1-6
+            for point in range(1, 7):
+                if self.points[point] > 0:
+                    return True
+
+        return False
+
+    def get_points_for_win(self, winner: int) -> int:
+        """Calculate points scored for a win based on game type and cube value.
+
+        Args:
+            winner: The winning player (1 or -1)
+
+        Returns:
+            Points scored (cube_value × multiplier)
+        """
+        if self.is_backgammon(winner):
+            multiplier = 3
+        elif self.is_gammon(winner):
+            multiplier = 2
+        else:
+            multiplier = 1
+
+        return self.cube_value * multiplier
 
     def encode_for_nn(self, player: int) -> np.ndarray:
         """Encode board state for neural network input.

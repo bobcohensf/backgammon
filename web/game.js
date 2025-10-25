@@ -14,31 +14,54 @@ let selectedPoint = null;
 let validDestinations = [];
 let isPlayerTurn = true;
 let diceRolled = false;
+let matchScore = {1: 0, '-1': 0};
+let matchLength = 7;
+let crawfordGame = false;
 
 // DOM elements
 const newGameBtn = document.getElementById('new-game-btn');
 const rollDiceBtn = document.getElementById('roll-dice-btn');
+const doubleBtn = document.getElementById('double-btn');
 const resetMoveBtn = document.getElementById('reset-move-btn');
 const acceptMoveBtn = document.getElementById('accept-move-btn');
+const acceptDoubleBtn = document.getElementById('accept-double-btn');
+const rejectDoubleBtn = document.getElementById('reject-double-btn');
 const currentPlayerDisplay = document.getElementById('current-player');
 const diceDisplay = document.getElementById('dice-display');
+const cubeDisplay = document.getElementById('cube-display');
+const cubeOwner = document.getElementById('cube-owner');
 const statusMessage = document.getElementById('status-message');
+const doubleOfferPanel = document.getElementById('double-offer-panel');
+const doubleOfferText = document.getElementById('double-offer-text');
+const player1Score = document.getElementById('player1-score');
+const player2Score = document.getElementById('player2-score');
+const matchTarget = document.getElementById('match-target');
+const crawfordIndicator = document.getElementById('crawford-indicator');
+const gamesWon = document.getElementById('games-won');
+const historyList = document.getElementById('history-list');
 
 // Event listeners
 newGameBtn.addEventListener('click', startNewGame);
 rollDiceBtn.addEventListener('click', rollDice);
+doubleBtn.addEventListener('click', offerDouble);
 resetMoveBtn.addEventListener('click', resetMoves);
 acceptMoveBtn.addEventListener('click', acceptTurn);
+acceptDoubleBtn.addEventListener('click', acceptDouble);
+rejectDoubleBtn.addEventListener('click', rejectDouble);
 
 /**
  * Start a new game
  */
 async function startNewGame() {
     try {
-        updateStatus('Starting new game...');
+        updateStatus('Starting new match...');
 
         const response = await fetch(`${API_BASE}/api/new_game`, {
-            method: 'POST'
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ match_length: 7 })
         });
 
         const data = await response.json();
@@ -49,19 +72,29 @@ async function startNewGame() {
         }
 
         gameId = data.game_id;
+        matchScore = data.match_score;
+        matchLength = data.match_length;
+        crawfordGame = false;
+
         renderBoard(data.board);
+        updateMatchScore();
         updateStatus(data.message);
 
         // Enable roll dice button for player 1
         rollDiceBtn.disabled = false;
+        doubleBtn.disabled = true;
         resetMoveBtn.disabled = true;
         acceptMoveBtn.disabled = true;
         diceRolled = false;
+        doubleOfferPanel.style.display = 'none';
 
-        console.log('New game started:', gameId);
+        // Clear history
+        historyList.innerHTML = 'No games played yet';
+
+        console.log('New match started:', gameId);
     } catch (error) {
-        console.error('Error starting new game:', error);
-        updateStatus('Failed to start new game', 'error');
+        console.error('Error starting new match:', error);
+        updateStatus('Failed to start new match', 'error');
     }
 }
 
@@ -92,8 +125,10 @@ async function rollDice() {
         diceRolled = true;
         renderBoard(data.board);
         updateDiceDisplay(dice);
+        updateCubeDisplay(data.board);
 
         rollDiceBtn.disabled = true;
+        doubleBtn.disabled = true;
         resetMoveBtn.disabled = false;
 
         if (!data.has_legal_moves) {
@@ -207,11 +242,38 @@ async function acceptTurn() {
         renderBoard(data.board);
 
         if (data.game_over) {
-            const winner = data.winner === 1 ? 'Player 1 (X)' : 'Player 2 (O)';
-            updateStatus(`Game Over! ${winner} wins!`);
-            rollDiceBtn.disabled = true;
+            // Update match score
+            matchScore = data.match_score;
+            updateMatchScore();
+
+            // Update game history
+            if (data.game_history) {
+                updateGameHistory(data.game_history);
+            }
+
+            if (data.match_over) {
+                const matchWinner = data.match_winner === 1 ? 'Player 1 (X)' : 'Player 2 (O)';
+                updateStatus(`MATCH OVER! ${matchWinner} wins the match!`);
+                rollDiceBtn.disabled = true;
+                doubleBtn.disabled = true;
+                resetMoveBtn.disabled = true;
+                acceptMoveBtn.disabled = true;
+                return;
+            }
+
+            // Game over but match continues
+            const winner = data.winner === 1 ? 'Player 1' : 'Player 2';
+            updateStatus(data.message || `Game won by ${winner}! Click "Roll Dice" to start next game.`);
+
+            // Update Crawford indicator
+            crawfordGame = data.crawford_game || false;
+            crawfordIndicator.style.display = crawfordGame ? 'block' : 'none';
+
+            rollDiceBtn.disabled = false;
+            doubleBtn.disabled = true;
             resetMoveBtn.disabled = true;
             acceptMoveBtn.disabled = true;
+            diceRolled = false;
             return;
         }
 
@@ -221,11 +283,19 @@ async function acceptTurn() {
         selectedPoint = null;
         validDestinations = [];
 
+        // Update match score if present
+        if (data.match_score) {
+            matchScore = data.match_score;
+            updateMatchScore();
+        }
+
         rollDiceBtn.disabled = false;
         resetMoveBtn.disabled = true;
         acceptMoveBtn.disabled = true;
+        updateDoubleButton(data.board);
 
         updateDiceDisplay([]);
+        updateCubeDisplay(data.board);
         updateStatus('Turn accepted. Click "Roll Dice" to continue.');
 
         // Auto-roll for AI
@@ -354,6 +424,8 @@ function renderBoard(boardData) {
     if (boardData) {
         currentPlayer = boardData.current_player;
         updatePlayerDisplay();
+        updateCubeDisplay(boardData);
+        updateDoubleButton(boardData);
     }
 
     // Get current board state from DOM if not provided
@@ -530,9 +602,213 @@ function updateStatus(message, type = 'info') {
 }
 
 /**
+ * Offer a double to the opponent
+ */
+async function offerDouble() {
+    if (!gameId || diceRolled) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/api/offer_double/${gameId}`, {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            updateStatus(`Error: ${data.error}`, 'error');
+            return;
+        }
+
+        renderBoard(data.board);
+        updateCubeDisplay(data.board);
+
+        // Show double offer panel to opponent
+        if (currentPlayer === 1) {
+            // Human offered, AI needs to respond (auto-respond for now)
+            updateStatus('You offered a double! AI is thinking...');
+            setTimeout(() => aiRespondToDouble(), 500);
+        } else {
+            // AI offered, show panel to human
+            showDoubleOffer();
+        }
+
+    } catch (error) {
+        console.error('Error offering double:', error);
+        updateStatus('Failed to offer double', 'error');
+    }
+}
+
+/**
+ * Accept a double offer
+ */
+async function acceptDouble() {
+    if (!gameId) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/api/accept_double/${gameId}`, {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            updateStatus(`Error: ${data.error}`, 'error');
+            return;
+        }
+
+        renderBoard(data.board);
+        updateCubeDisplay(data.board);
+        doubleOfferPanel.style.display = 'none';
+
+        updateStatus(data.message);
+        rollDiceBtn.disabled = false;
+        doubleBtn.disabled = true;
+
+    } catch (error) {
+        console.error('Error accepting double:', error);
+        updateStatus('Failed to accept double', 'error');
+    }
+}
+
+/**
+ * Reject a double offer (forfeit game)
+ */
+async function rejectDouble() {
+    if (!gameId) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/api/reject_double/${gameId}`, {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            updateStatus(`Error: ${data.error}`, 'error');
+            return;
+        }
+
+        renderBoard(data.board);
+        doubleOfferPanel.style.display = 'none';
+
+        // Update match score
+        matchScore = data.match_score;
+        updateMatchScore();
+
+        // Update Crawford indicator
+        crawfordGame = data.crawford_game || false;
+        crawfordIndicator.style.display = crawfordGame ? 'block' : 'none';
+
+        if (data.match_over) {
+            const matchWinner = data.match_winner === 1 ? 'Player 1 (X)' : 'Player 2 (O)';
+            updateStatus(`MATCH OVER! ${matchWinner} wins the match!`);
+            rollDiceBtn.disabled = true;
+            doubleBtn.disabled = true;
+        } else {
+            updateStatus(data.message);
+            rollDiceBtn.disabled = false;
+            doubleBtn.disabled = true;
+        }
+
+    } catch (error) {
+        console.error('Error rejecting double:', error);
+        updateStatus('Failed to reject double', 'error');
+    }
+}
+
+/**
+ * Show double offer panel
+ */
+function showDoubleOffer() {
+    doubleOfferText.textContent = 'Opponent offers to double!';
+    doubleOfferPanel.style.display = 'block';
+    rollDiceBtn.disabled = true;
+    doubleBtn.disabled = true;
+}
+
+/**
+ * AI responds to double (simplified - always accepts for now)
+ */
+async function aiRespondToDouble() {
+    // For now, AI always accepts
+    await acceptDouble();
+}
+
+/**
+ * Update cube display
+ */
+function updateCubeDisplay(board) {
+    if (!board) return;
+
+    cubeDisplay.textContent = board.cube_value;
+
+    let ownerText = 'Center';
+    if (board.cube_owner === 1) {
+        ownerText = 'Player 1';
+    } else if (board.cube_owner === -1) {
+        ownerText = 'Player 2 (AI)';
+    }
+    cubeOwner.textContent = ownerText;
+
+    // Show double offer panel if a double is offered
+    if (board.double_offered_by !== null && board.double_offered_by !== currentPlayer) {
+        showDoubleOffer();
+    }
+}
+
+/**
+ * Update double button state
+ */
+function updateDoubleButton(board) {
+    if (!board || diceRolled || crawfordGame) {
+        doubleBtn.disabled = true;
+        return;
+    }
+
+    // Enable double button if current player can double and it's player 1
+    const canDouble = board.cube_owner === null || board.cube_owner === currentPlayer;
+    doubleBtn.disabled = !(currentPlayer === 1 && canDouble && board.cube_value < 64);
+}
+
+/**
+ * Update match score display
+ */
+function updateMatchScore() {
+    player1Score.textContent = `Player 1: ${matchScore[1] || 0}`;
+    player2Score.textContent = `Player 2: ${matchScore[-1] || 0}`;
+    matchTarget.textContent = `First to ${matchLength}`;
+}
+
+/**
+ * Update game history
+ */
+function updateGameHistory(history) {
+    if (!history || history.length === 0) {
+        historyList.innerHTML = 'No games played yet';
+        return;
+    }
+
+    let html = '<ul>';
+    history.forEach((game, index) => {
+        const winner = game.winner === 1 ? 'P1' : 'P2';
+        const type = game.is_backgammon ? 'Backgammon' : (game.is_gammon ? 'Gammon' : 'Normal');
+        const rejected = game.double_rejected ? ' (Double Rejected)' : '';
+        html += `<li>Game ${index + 1}: ${winner} wins ${game.points}pt (${type}${rejected})</li>`;
+    });
+    html += '</ul>';
+    historyList.innerHTML = html;
+
+    // Update games won
+    const p1Wins = history.filter(g => g.winner === 1).length;
+    const p2Wins = history.filter(g => g.winner === -1).length;
+    gamesWon.textContent = `Player 1: ${p1Wins} | Player 2: ${p2Wins}`;
+}
+
+/**
  * Initialize the game on page load
  */
 document.addEventListener('DOMContentLoaded', () => {
     updateStatus('Click "New Game" to start!');
     updatePlayerDisplay();
+    updateMatchScore();
 });
