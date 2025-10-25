@@ -82,11 +82,14 @@ async function startNewGame() {
 
         // Enable roll dice button for player 1
         rollDiceBtn.disabled = false;
-        doubleBtn.disabled = true;
         resetMoveBtn.disabled = true;
         acceptMoveBtn.disabled = true;
         diceRolled = false;
         doubleOfferPanel.style.display = 'none';
+
+        // Update double button based on initial game state
+        updateDoubleButton(data.board);
+        updateCubeDisplay(data.board);
 
         // Clear history
         historyList.innerHTML = 'No games played yet';
@@ -270,10 +273,14 @@ async function acceptTurn() {
             crawfordIndicator.style.display = crawfordGame ? 'block' : 'none';
 
             rollDiceBtn.disabled = false;
-            doubleBtn.disabled = true;
             resetMoveBtn.disabled = true;
             acceptMoveBtn.disabled = true;
             diceRolled = false;
+
+            // Update double button based on game state (Crawford, cube ownership, etc.)
+            updateDoubleButton(data.board);
+            updateCubeDisplay(data.board);
+
             return;
         }
 
