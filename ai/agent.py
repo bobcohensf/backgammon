@@ -7,9 +7,151 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
-from typing import List, Optional
+from typing import List, Optional, Dict
 from game import BackgammonGame, Board, MoveSequence
-from .network import BackgammonNet
+from .network import BackgammonNet, MatchAwareBackgammonNet
+
+
+class MatchAwareTDAgent:
+    """Match-aware TD learning agent with cube decisions."""
+
+    def __init__(self, network: Optional[MatchAwareBackgammonNet] = None,
+                 learning_rate=0.001, lambda_param=0.7, epsilon=0.1):
+        """Initialize the match-aware TD agent.
+
+        Args:
+            network: Match-aware neural network. If None, creates new one.
+            learning_rate: Learning rate for optimizer
+            lambda_param: TD(λ) parameter
+            epsilon: Exploration rate
+        """
+        self.network = network if network else MatchAwareBackgammonNet()
+        self.optimizer = optim.Adam(self.network.parameters(), lr=learning_rate)
+        self.lambda_param = lambda_param
+        self.epsilon = epsilon
+        self.match_length = 7  # Default match length
+
+    def select_move(self, game: BackgammonGame, player: int, dice: List[int],
+                    my_score: int, opp_score: int, is_crawford: bool = False,
+                    greedy: bool = False) -> MoveSequence:
+        """Select a move using match equity evaluation.
+
+        Args:
+            game: Current game state
+            player: Player to move
+            dice: Dice rolled
+            my_score, opp_score: Match scores
+            is_crawford: Crawford game indicator
+            greedy: Always select best move
+
+        Returns:
+            Selected move sequence
+        """
+        legal_moves = game.get_legal_moves(player, dice)
+
+        if not legal_moves or (len(legal_moves) == 1 and len(legal_moves[0].moves) == 0):
+            return legal_moves[0] if legal_moves else MoveSequence([])
+
+        # Epsilon-greedy exploration
+        if not greedy and random.random() < self.epsilon:
+            return random.choice(legal_moves)
+
+        # Greedy: select best move based on match equity
+        best_move = None
+        best_equity = -float('inf')
+
+        for move_seq in legal_moves:
+            temp_board = game.board.copy()
+            for move in move_seq.moves:
+                temp_board.apply_move(player, move.from_point, move.to_point)
+
+            # Evaluate match equity after this move
+            equity = self.network.evaluate_match_equity(
+                temp_board, player, my_score, opp_score,
+                self.match_length, is_crawford
+            )
+
+            if equity > best_equity:
+                best_equity = equity
+                best_move = move_seq
+
+        return best_move if best_move else legal_moves[0]
+
+    def should_offer_double(self, board: Board, player: int, my_score: int,
+                           opp_score: int, is_crawford: bool = False,
+                           threshold: float = 0.7) -> bool:
+        """Decide whether to offer a double.
+
+        Args:
+            board: Current board state
+            player: Player considering double
+            my_score, opp_score: Match scores
+            is_crawford: Crawford game indicator
+            threshold: Minimum score to double (0-1)
+
+        Returns:
+            True if should offer double
+        """
+        if is_crawford:
+            return False
+
+        if not board.can_offer_double(player):
+            return False
+
+        # Get cube decision from network
+        cube_decision = self.network.evaluate_cube_decision(
+            board, player, my_score, opp_score, self.match_length, is_crawford
+        )
+
+        return cube_decision['should_double'] > threshold
+
+    def should_accept_double(self, board: Board, player: int, my_score: int,
+                            opp_score: int, is_crawford: bool = False,
+                            threshold: float = 0.25) -> bool:
+        """Decide whether to accept a double.
+
+        Args:
+            board: Current board state
+            player: Player considering acceptance
+            my_score, opp_score: Match scores
+            is_crawford: Crawford game indicator
+            threshold: Minimum acceptance threshold (0-1)
+
+        Returns:
+            True if should accept double
+        """
+        cube_decision = self.network.evaluate_cube_decision(
+            board, player, my_score, opp_score, self.match_length, is_crawford
+        )
+
+        # Accept if position is not too bad (should_accept > threshold)
+        # Lower threshold means more conservative (accept less often)
+        return cube_decision['should_accept'] > threshold
+
+    def get_match_equity(self, board: Board, player: int, my_score: int,
+                        opp_score: int, is_crawford: bool = False) -> float:
+        """Get match equity for current position.
+
+        Args:
+            board: Current board
+            player: Player perspective
+            my_score, opp_score: Match scores
+            is_crawford: Crawford indicator
+
+        Returns:
+            Match equity (0-1, probability of winning match)
+        """
+        return self.network.evaluate_match_equity(
+            board, player, my_score, opp_score, self.match_length, is_crawford
+        )
+
+    def save(self, path):
+        """Save the agent's network."""
+        self.network.save(path)
+
+    def load(self, path):
+        """Load the agent's network."""
+        self.network.load(path)
 
 
 class TDAgent:

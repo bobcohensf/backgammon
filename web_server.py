@@ -15,7 +15,7 @@ import uuid
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from game.game import BackgammonGame, Move, MoveSequence
-from ai.agent import TDAgent
+from ai.agent import TDAgent, MatchAwareTDAgent
 
 app = Flask(__name__, static_folder='web', static_url_path='')
 CORS(app)
@@ -72,20 +72,44 @@ def new_game():
 
     # Initialize game and AI agent
     game = BackgammonGame()
-    agent = TDAgent(epsilon=0.0)  # AI plays optimally (no exploration)
 
-    # Try to load trained model if it exists
-    model_path = 'models/model_final.pth'
-    if os.path.exists(model_path):
+    # Try to load match-aware model first, fall back to regular model
+    match_model_path = 'models/match_model_final.pth'
+    regular_model_path = 'models/model_final.pth'
+
+    agent = None
+    agent_type = 'regular'
+
+    if os.path.exists(match_model_path):
         try:
-            agent.load(model_path)
+            agent = MatchAwareTDAgent(epsilon=0.0)
+            agent.match_length = match_length
+            agent.load(match_model_path)
+            agent_type = 'match_aware'
+            print(f"Loaded match-aware model from {match_model_path}")
         except Exception as e:
-            print(f"Warning: Could not load model from {model_path}: {e}")
+            print(f"Warning: Could not load match model from {match_model_path}: {e}")
+
+    if agent is None and os.path.exists(regular_model_path):
+        try:
+            agent = TDAgent(epsilon=0.0)
+            agent.load(regular_model_path)
+            agent_type = 'regular'
+            print(f"Loaded regular model from {regular_model_path}")
+        except Exception as e:
+            print(f"Warning: Could not load model from {regular_model_path}: {e}")
+
+    if agent is None:
+        # No model found, create new regular agent
+        agent = TDAgent(epsilon=0.0)
+        agent_type = 'regular'
+        print("No trained model found, using untrained agent")
 
     # Store game state
     games[game_id] = {
         'game': game,
         'agent': agent,
+        'agent_type': agent_type,  # 'regular' or 'match_aware'
         'staged_moves': [],  # Moves staged but not yet accepted
         'original_board': None,  # Backup for reset
         'dice_rolled': False,
@@ -414,24 +438,25 @@ def ai_move(game_id):
     session = games[game_id]
     game = session['game']
     agent = session['agent']
+    agent_type = session.get('agent_type', 'regular')
 
     if not session['dice_rolled']:
         return jsonify({'error': 'Must roll dice first'}), 400
 
-    # Get AI's move
-    legal_moves = game.get_legal_moves(game.current_player, game.dice)
+    # Get AI's move - use match context if match-aware agent
+    if agent_type == 'match_aware':
+        player = game.current_player
+        my_score = session['match_score'][player]
+        opp_score = session['match_score'][-player]
+        is_crawford = session['crawford_game']
 
-    if not legal_moves:
-        return jsonify({
-            'board': serialize_board(game),
-            'message': 'No legal moves available',
-            'moves': []
-        })
+        best_move = agent.select_move(
+            game, player, game.dice, my_score, opp_score, is_crawford, greedy=True
+        )
+    else:
+        best_move = agent.select_move(game, game.current_player, game.dice, greedy=True)
 
-    # AI selects best move
-    best_move = agent.select_move(game, game.current_player, game.dice, greedy=True)
-
-    if best_move is None:
+    if best_move is None or (len(best_move.moves) == 0):
         return jsonify({
             'board': serialize_board(game),
             'message': 'No legal moves available',
@@ -542,6 +567,57 @@ def accept_double(game_id):
         })
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/ai_cube_decision/<game_id>', methods=['POST'])
+def ai_cube_decision(game_id):
+    """AI decides whether to accept or reject a double.
+
+    This is called automatically when AI is offered a double.
+    """
+    if game_id not in games:
+        return jsonify({'error': 'Game not found'}), 404
+
+    session = games[game_id]
+    game = session['game']
+    agent = session['agent']
+    agent_type = session.get('agent_type', 'regular')
+
+    if game.board.double_offered_by is None:
+        return jsonify({'error': 'No double has been offered'}), 400
+
+    # AI evaluates whether to accept
+    player = game.current_player
+    should_accept = True  # Default behavior
+
+    if agent_type == 'match_aware':
+        # Use AI's cube decision logic
+        my_score = session['match_score'][player]
+        opp_score = session['match_score'][-player]
+        is_crawford = session['crawford_game']
+
+        should_accept = agent.should_accept_double(
+            game.board, player, my_score, opp_score, is_crawford
+        )
+    else:
+        # Regular agent - use simple heuristic (always accept for now)
+        # Could be enhanced with position evaluation
+        should_accept = True
+
+    if should_accept:
+        # Accept the double
+        game.board.accept_double(player)
+        return jsonify({
+            'decision': 'accept',
+            'board': serialize_board(game),
+            'message': f'AI accepts! Cube is now {game.board.cube_value}.'
+        })
+    else:
+        # Reject the double - handled in reject_double endpoint
+        return jsonify({
+            'decision': 'reject',
+            'message': 'AI rejects the double and forfeits the game.'
+        })
 
 
 @app.route('/api/reject_double/<game_id>', methods=['POST'])

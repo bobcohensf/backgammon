@@ -1,4 +1,4 @@
-from .network import BackgammonNet
-from .agent import TDAgent
+from .network import BackgammonNet, MatchAwareBackgammonNet
+from .agent import TDAgent, MatchAwareTDAgent
 
-__all__ = ['BackgammonNet', 'TDAgent']
+__all__ = ['BackgammonNet', 'TDAgent', 'MatchAwareBackgammonNet', 'MatchAwareTDAgent']

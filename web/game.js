@@ -727,11 +727,39 @@ function showDoubleOffer() {
 }
 
 /**
- * AI responds to double (simplified - always accepts for now)
+ * AI responds to double using trained cube decision logic
  */
 async function aiRespondToDouble() {
-    // For now, AI always accepts
-    await acceptDouble();
+    if (!gameId) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/api/ai_cube_decision/${gameId}`, {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            updateStatus(`Error: ${data.error}`, 'error');
+            return;
+        }
+
+        if (data.decision === 'accept') {
+            // AI accepted
+            renderBoard(data.board);
+            updateCubeDisplay(data.board);
+            updateStatus(data.message);
+            rollDiceBtn.disabled = false;
+            doubleBtn.disabled = true;
+        } else {
+            // AI rejected - game forfeited, handled in reject endpoint
+            await rejectDouble();
+        }
+
+    } catch (error) {
+        console.error('Error with AI cube decision:', error);
+        updateStatus('Failed to process AI cube decision', 'error');
+    }
 }
 
 /**
