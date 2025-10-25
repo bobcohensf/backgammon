@@ -586,18 +586,21 @@ def ai_cube_decision(game_id):
     if game.board.double_offered_by is None:
         return jsonify({'error': 'No double has been offered'}), 400
 
-    # AI evaluates whether to accept
-    player = game.current_player
+    # The AI is the opponent of whoever offered the double
+    # double_offered_by is the player who offered (e.g., player 1)
+    # AI needs to be the opponent (e.g., player -1)
+    opponent_player = -game.board.double_offered_by
+
     should_accept = True  # Default behavior
 
     if agent_type == 'match_aware':
         # Use AI's cube decision logic
-        my_score = session['match_score'][player]
-        opp_score = session['match_score'][-player]
+        my_score = session['match_score'][opponent_player]
+        opp_score = session['match_score'][-opponent_player]
         is_crawford = session['crawford_game']
 
         should_accept = agent.should_accept_double(
-            game.board, player, my_score, opp_score, is_crawford
+            game.board, opponent_player, my_score, opp_score, is_crawford
         )
     else:
         # Regular agent - use simple heuristic (always accept for now)
@@ -606,7 +609,7 @@ def ai_cube_decision(game_id):
 
     if should_accept:
         # Accept the double
-        game.board.accept_double(player)
+        game.board.accept_double(opponent_player)
         return jsonify({
             'decision': 'accept',
             'board': serialize_board(game),
