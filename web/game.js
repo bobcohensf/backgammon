@@ -752,12 +752,13 @@ async function aiRespondToDouble() {
         }
 
         if (data.decision === 'accept') {
-            // AI accepted
+            // AI accepted - cube is now owned by AI
             renderBoard(data.board);
             updateCubeDisplay(data.board);
             updateStatus(data.message);
             rollDiceBtn.disabled = false;
-            doubleBtn.disabled = true;
+            // Update double button based on new cube ownership
+            updateDoubleButton(data.board);
         } else {
             // AI rejected - game forfeited, handled in reject endpoint
             await rejectDouble();
@@ -795,14 +796,35 @@ function updateCubeDisplay(board) {
  * Update double button state
  */
 function updateDoubleButton(board) {
+    console.log('[DEBUG] updateDoubleButton called:', {
+        board: board ? 'present' : 'null',
+        diceRolled,
+        crawfordGame,
+        currentPlayer,
+        cube_owner: board?.cube_owner,
+        cube_value: board?.cube_value
+    });
+
     if (!board || diceRolled || crawfordGame) {
+        console.log('[DEBUG] Disabling double button: no board, dice rolled, or Crawford');
         doubleBtn.disabled = true;
         return;
     }
 
     // Enable double button if current player can double and it's player 1
     const canDouble = board.cube_owner === null || board.cube_owner === currentPlayer;
-    doubleBtn.disabled = !(currentPlayer === 1 && canDouble && board.cube_value < 64);
+    const shouldEnable = currentPlayer === 1 && canDouble && board.cube_value < 64;
+
+    console.log('[DEBUG] Double button logic:', {
+        canDouble,
+        shouldEnable,
+        'cube_owner === null': board.cube_owner === null,
+        'cube_owner === currentPlayer': board.cube_owner === currentPlayer,
+        'currentPlayer === 1': currentPlayer === 1,
+        'cube_value < 64': board.cube_value < 64
+    });
+
+    doubleBtn.disabled = !shouldEnable;
 }
 
 /**
