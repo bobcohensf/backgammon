@@ -96,13 +96,23 @@ class BackgammonGame:
         all_sequences = []
         self._generate_move_sequences(player, dice, board, [], all_sequences)
 
+        # Debug logging
+        print(f"\n[MOVE GEN DEBUG] Generated {len(all_sequences)} total sequences for player {player} with dice {dice}")
+
         # If no moves found, return empty sequence
         if not all_sequences:
             return [MoveSequence([])]
 
         # Filter to keep only sequences that use the maximum number of dice
         max_dice_used = max(len(seq.moves) for seq in all_sequences)
+        print(f"[MOVE GEN DEBUG] Max dice used: {max_dice_used}")
+        print(f"[MOVE GEN DEBUG] Sequences before filtering:")
+        for i, seq in enumerate(all_sequences[:10]):  # Show first 10
+            moves_str = " -> ".join([f"{m.from_point}→{m.to_point}(die={m.die_value})" for m in seq.moves])
+            print(f"  {i}: {moves_str}")
+
         all_sequences = [seq for seq in all_sequences if len(seq.moves) == max_dice_used]
+        print(f"[MOVE GEN DEBUG] After filtering: {len(all_sequences)} sequences")
 
         # Remove duplicates (same final position)
         unique_sequences = []
@@ -119,6 +129,13 @@ class BackgammonGame:
             if board_hash not in seen_boards:
                 seen_boards.add(board_hash)
                 unique_sequences.append(seq)
+
+        print(f"[MOVE GEN DEBUG] After deduplication: {len(unique_sequences)} unique sequences")
+        print(f"[MOVE GEN DEBUG] Final unique sequences:")
+        for i, seq in enumerate(unique_sequences):
+            moves_str = " -> ".join([f"{m.from_point}→{m.to_point}" for m in seq.moves])
+            print(f"  {i}: {moves_str}")
+        print()
 
         return unique_sequences if unique_sequences else [MoveSequence([])]
 

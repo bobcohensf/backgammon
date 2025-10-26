@@ -500,6 +500,13 @@ def get_valid_destinations(game_id, from_point):
     legal_moves = game.get_legal_moves(game.current_player, game.dice)
     print(f"Total legal move sequences: {len(legal_moves)}")
 
+    # Debug: print board state
+    print(f"Board state (points with pieces):")
+    for point in range(1, 25):
+        count = game.board.points[point]
+        if count != 0:
+            print(f"  Point {point}: {count:+d}")
+
     # Find destinations for pieces at from_point
     destinations = set()
 
