@@ -796,13 +796,16 @@ function updateCubeDisplay(board) {
  * Update double button state
  */
 function updateDoubleButton(board) {
+    // Add stack trace to see who called this
+    const stack = new Error().stack;
     console.log('[DEBUG] updateDoubleButton called:', {
         board: board ? 'present' : 'null',
         diceRolled,
         crawfordGame,
         currentPlayer,
         cube_owner: board?.cube_owner,
-        cube_value: board?.cube_value
+        cube_value: board?.cube_value,
+        calledFrom: stack.split('\n')[2]?.trim()  // Show who called this function
     });
 
     if (!board || diceRolled || crawfordGame) {
@@ -824,7 +827,9 @@ function updateDoubleButton(board) {
         'cube_value < 64': board.cube_value < 64
     });
 
-    doubleBtn.disabled = !shouldEnable;
+    const newState = !shouldEnable;
+    console.log('[DEBUG] Setting doubleBtn.disabled =', newState, '(was', doubleBtn.disabled, ')');
+    doubleBtn.disabled = newState;
 }
 
 /**
