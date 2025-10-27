@@ -328,28 +328,42 @@ class ImprovedMatchPlayTrainer:
             torch.nn.utils.clip_grad_norm_(self.agent.network.parameters(), max_norm=1.0)
             self.agent.optimizer.step()
 
-    def train(self, num_matches=1000, save_every=100, verbose=True):
+    def train(self, num_matches=1000, save_every=100, verbose=True,
+              fixed_threshold=None, fixed_exploration=None):
         """Train the agent through match play.
 
         Args:
             num_matches: Number of matches to play
             save_every: Save checkpoint every N matches
             verbose: Print progress
+            fixed_threshold: If provided, use this fixed threshold instead of dynamic
+            fixed_exploration: If provided, use this fixed exploration instead of dynamic
         """
         if verbose:
             print(f"Starting IMPROVED match play training for {num_matches} matches...")
             print(f"Match length: {self.match_length} points")
             print(f"Learning rate: {self.agent.optimizer.param_groups[0]['lr']}")
             print(f"Epsilon: {self.agent.epsilon}")
-            print(f"Double threshold: {self.double_threshold_start:.2f} → {self.double_threshold_end:.2f}")
-            print(f"Exploration bonus: {self.double_exploration_bonus:.2f} → 0.00")
+            if fixed_threshold is not None or fixed_exploration is not None:
+                print(f"Double threshold: {fixed_threshold if fixed_threshold is not None else 'dynamic'}")
+                print(f"Exploration bonus: {fixed_exploration if fixed_exploration is not None else 'dynamic'}")
+            else:
+                print(f"Double threshold: {self.double_threshold_start:.2f} → {self.double_threshold_end:.2f}")
+                print(f"Exploration bonus: {self.double_exploration_bonus:.2f} → 0.00")
 
         iterator = tqdm(range(num_matches)) if verbose else range(num_matches)
 
         for i in iterator:
-            # Get dynamic thresholds
-            threshold = self.get_double_threshold(i, num_matches)
-            exploration = self.get_exploration_bonus(i, num_matches)
+            # Get thresholds (either fixed or dynamic)
+            if fixed_threshold is not None:
+                threshold = fixed_threshold
+            else:
+                threshold = self.get_double_threshold(i, num_matches)
+
+            if fixed_exploration is not None:
+                exploration = fixed_exploration
+            else:
+                exploration = self.get_exploration_bonus(i, num_matches)
 
             # Play match with alternating first player
             self.play_match(training=True, starting_player=None,
@@ -368,16 +382,20 @@ class ImprovedMatchPlayTrainer:
                     total_first_wins = self.match_wins_as_first[1] + self.match_wins_as_first[-1]
                     first_player_adv = total_first_wins / self.matches_played if self.matches_played > 0 else 0.5
 
-                    tqdm.write(
-                        f"\nMatches: {self.matches_played}, "
-                        f"P1 match win rate: {p1_match_win_rate:.3f}, "
-                        f"1st-player adv: {first_player_adv:.3f}\n"
-                        f"  Games: {self.games_played}, "
-                        f"Doubles/game: {doubles_rate:.2f}, "
-                        f"Accept rate: {accept_rate:.2%}\n"
-                        f"  Current threshold: {threshold:.3f}, "
-                        f"exploration: {exploration:.3f}"
-                    )
+                    # Build progress message
+                    msg = (f"\nMatches: {self.matches_played}, "
+                           f"P1 match win rate: {p1_match_win_rate:.3f}, "
+                           f"1st-player adv: {first_player_adv:.3f}\n"
+                           f"  Games: {self.games_played}, "
+                           f"Doubles/game: {doubles_rate:.2f}, "
+                           f"Accept rate: {accept_rate:.2%}")
+
+                    # Only show threshold/exploration if using dynamic schedule
+                    if fixed_threshold is None or fixed_exploration is None:
+                        msg += (f"\n  Current threshold: {threshold:.3f}, "
+                               f"exploration: {exploration:.3f}")
+
+                    tqdm.write(msg)
 
         if verbose:
             print(f"\nTraining complete! Total matches: {self.matches_played}")

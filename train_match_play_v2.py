@@ -41,6 +41,12 @@ def main():
                        help='Save checkpoint every N matches (default: 500)')
     parser.add_argument('--eval-matches', type=int, default=100,
                        help='Number of matches for evaluation (default: 100)')
+    parser.add_argument('--double-threshold', type=float, default=None,
+                       help='Fixed doubling threshold (overrides dynamic schedule)')
+    parser.add_argument('--exploration-bonus', type=float, default=None,
+                       help='Fixed exploration bonus (overrides dynamic schedule)')
+    parser.add_argument('--continue-schedule', action='store_true',
+                       help='Continue dynamic schedule from where last run left off')
 
     args = parser.parse_args()
 
@@ -81,16 +87,32 @@ def main():
         save_dir=args.save_dir
     )
 
-    print("\nStarting training...")
-    print("Key improvements:")
-    print("  - Dynamic doubling threshold: 0.55 → 0.70")
-    print("  - Exploration bonus for doubles: 0.15 → 0.00")
-    print("  - Alternating first player each game")
-    print("  - Tracking first-player advantage")
-    print()
+    # Handle fixed vs dynamic hyperparameters
+    if args.double_threshold is not None or args.exploration_bonus is not None:
+        fixed_threshold = args.double_threshold if args.double_threshold is not None else 0.70
+        fixed_exploration = args.exploration_bonus if args.exploration_bonus is not None else 0.00
 
-    # Train
-    trainer.train(num_matches=args.matches, save_every=args.save_every, verbose=True)
+        print("\nStarting training with FIXED hyperparameters...")
+        print(f"  - Fixed doubling threshold: {fixed_threshold}")
+        print(f"  - Fixed exploration bonus: {fixed_exploration}")
+        print("  - Alternating first player each game")
+        print("  - Tracking first-player advantage")
+        print()
+
+        # Train with fixed values
+        trainer.train(num_matches=args.matches, save_every=args.save_every, verbose=True,
+                     fixed_threshold=fixed_threshold, fixed_exploration=fixed_exploration)
+    else:
+        print("\nStarting training with DYNAMIC hyperparameters...")
+        print("Key improvements:")
+        print("  - Dynamic doubling threshold: 0.55 → 0.70")
+        print("  - Exploration bonus for doubles: 0.15 → 0.00")
+        print("  - Alternating first player each game")
+        print("  - Tracking first-player advantage")
+        print()
+
+        # Train with dynamic schedule
+        trainer.train(num_matches=args.matches, save_every=args.save_every, verbose=True)
 
     # Evaluate
     print("\n" + "=" * 70)

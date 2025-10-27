@@ -209,30 +209,43 @@ Separate tracking of "Player 1 wins" vs "first-player wins" reveals whether bias
 
 ## Recommended Training Procedure
 
+### Important: Continuation Training Issue
+
+⚠️ **When continuing from a checkpoint, the doubling threshold and exploration bonus RESET to their starting values**, even though the network weights are loaded correctly. This causes excessive doubling at the start of continuation training.
+
+**Solution:** Use fixed hyperparameters for continuation training.
+
 1. **Initial training** (5,000 matches):
    ```bash
    python train_match_play_v2.py --matches 5000 --epsilon 0.15 --lr 0.001
    ```
-   - Higher exploration
+   - Higher epsilon (move exploration)
    - Higher learning rate
+   - **Dynamic** threshold: 0.55 → 0.70
+   - **Dynamic** exploration bonus: 0.15 → 0.00
    - Focus on discovering doubling strategies
 
 2. **Refinement training** (10,000 matches):
    ```bash
-   python train_match_play_v2.py --matches 10000 --epsilon 0.1 --lr 0.0005 \\
-       --load models/match_model_5000.pth
+   python train_match_play_v2.py --matches 10000 --epsilon 0.1 --lr 0.0005 \
+       --load models/match_model_5000.pth \
+       --double-threshold 0.70 --exploration-bonus 0.00
    ```
-   - Lower exploration
+   - ⭐ **CRITICAL:** Use `--double-threshold 0.70 --exploration-bonus 0.00` to avoid reset
+   - Lower epsilon for moves
    - Lower learning rate
+   - **Fixed** doubling parameters
    - Refine cube decisions
 
 3. **Fine-tuning** (10,000 matches):
    ```bash
-   python train_match_play_v2.py --matches 10000 --epsilon 0.05 --lr 0.0001 \\
-       --load models/match_model_15000.pth
+   python train_match_play_v2.py --matches 10000 --epsilon 0.05 --lr 0.0001 \
+       --load models/match_model_15000.pth \
+       --double-threshold 0.70 --exploration-bonus 0.00
    ```
-   - Minimal exploration
+   - Minimal epsilon
    - Very low learning rate
+   - **Fixed** doubling parameters
    - Polish final strategy
 
 ## Expected Training Time
