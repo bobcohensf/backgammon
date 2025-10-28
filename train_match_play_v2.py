@@ -47,6 +47,8 @@ def main():
                        help='Fixed exploration bonus (overrides dynamic schedule)')
     parser.add_argument('--continue-schedule', action='store_true',
                        help='Continue dynamic schedule from where last run left off')
+    parser.add_argument('--max-cube', type=int, default=16,
+                       help='Maximum cube value during training to prevent runaway (default: 16)')
 
     args = parser.parse_args()
 
@@ -60,6 +62,7 @@ def main():
     print(f"  Epsilon (exploration): {args.epsilon}")
     print(f"  Lambda (TD): {args.lambda_param}")
     print(f"  Hidden Layers: {args.hidden}")
+    print(f"  Max Cube Value: {args.max_cube if args.max_cube else 'unlimited'}")
     print()
 
     # Create or load network
@@ -84,7 +87,8 @@ def main():
     trainer = ImprovedMatchPlayTrainer(
         agent=agent,
         match_length=args.match_length,
-        save_dir=args.save_dir
+        save_dir=args.save_dir,
+        max_cube_value=args.max_cube
     )
 
     # Handle fixed vs dynamic hyperparameters
@@ -105,8 +109,9 @@ def main():
     else:
         print("\nStarting training with DYNAMIC hyperparameters...")
         print("Key improvements:")
-        print("  - Dynamic doubling threshold: 0.55 → 0.70")
-        print("  - Exploration bonus for doubles: 0.15 → 0.00")
+        print("  - Dynamic doubling threshold: 0.65 → 0.70")
+        print("  - Exploration bonus for doubles: 0.10 → 0.00")
+        print(f"  - Max cube value: {args.max_cube} (prevents runaway)")
         print("  - Alternating first player each game")
         print("  - Tracking first-player advantage")
         print()

@@ -21,18 +21,21 @@ from ai.agent import MatchAwareTDAgent
 class ImprovedMatchPlayTrainer:
     """Enhanced trainer for match-play with better cube decision learning."""
 
-    def __init__(self, agent: MatchAwareTDAgent, match_length=7, save_dir='models'):
+    def __init__(self, agent: MatchAwareTDAgent, match_length=7, save_dir='models',
+                 max_cube_value=None):
         """Initialize match play trainer.
 
         Args:
             agent: MatchAwareTDAgent to train
             match_length: Points to win match (default 7)
             save_dir: Directory to save model checkpoints
+            max_cube_value: Maximum cube value allowed (None for unlimited)
         """
         self.agent = agent
         self.match_length = match_length
         self.agent.match_length = match_length
         self.save_dir = save_dir
+        self.max_cube_value = max_cube_value
         os.makedirs(save_dir, exist_ok=True)
 
         # Training statistics
@@ -46,9 +49,9 @@ class ImprovedMatchPlayTrainer:
         self.doubles_rejected = 0
 
         # Dynamic doubling parameters
-        self.double_threshold_start = 0.55  # Start with lower threshold
+        self.double_threshold_start = 0.65  # Start higher to prevent runaway
         self.double_threshold_end = 0.70    # Gradually increase to standard
-        self.double_exploration_bonus = 0.15  # Exploration bonus for doubling
+        self.double_exploration_bonus = 0.10  # Lower exploration to prevent excessive doubling
 
     def get_double_threshold(self, match_num: int, total_matches: int) -> float:
         """Get doubling threshold that increases over training.
@@ -202,9 +205,13 @@ class ImprovedMatchPlayTrainer:
                 # Add exploration bonus
                 should_double_prob = cube_decision['should_double'] + exploration_bonus
 
-                # Check against threshold
+                # Check against threshold and max cube value
+                would_exceed_max = (self.max_cube_value is not None and
+                                   game.board.cube_value * 2 > self.max_cube_value)
+
                 should_double = (game.board.can_offer_double(player) and
-                                should_double_prob > double_threshold)
+                                should_double_prob > double_threshold and
+                                not would_exceed_max)
 
                 if should_double:
                     self.doubles_offered += 1
